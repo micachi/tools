@@ -1,0 +1,50 @@
+<h1>文字数カウンター</h1>
+<p class="lead">入力と同時に集計。日本語の「1文字」は数え方で結果が変わるため、複数の基準を並べて表示します。</p>
+
+<section class="panel">
+  <div class="field">
+    <label for="src">テキスト</label>
+    <textarea id="src" placeholder="ここにテキストを入力" style="min-height:150px"></textarea>
+  </div>
+  <div class="row">
+    <button id="half" class="primary">全角 → 半角</button>
+    <button id="copy">コピー</button>
+    <button id="clear">クリア</button>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="stats">
+    <div class="stat"><span class="v" id="g">0</span><span class="k">文字数（書記素）</span></div>
+    <div class="stat"><span class="v" id="cp">0</span><span class="k">コードポイント数</span></div>
+    <div class="stat"><span class="v" id="lines">0</span><span class="k">行数</span></div>
+    <div class="stat"><span class="v" id="words">0</span><span class="k">語数</span></div>
+    <div class="stat"><span class="v" id="u8">0</span><span class="k">UTF-8 バイト</span></div>
+  </div>
+  <div class="stats" style="margin-top:10px">
+    <div class="stat"><span class="v" id="fullAlpha">0</span><span class="k">全角英数</span></div>
+    <div class="stat"><span class="v" id="halfAlpha">0</span><span class="k">半角英数</span></div>
+    <div class="stat"><span class="v" id="fullKana">0</span><span class="k">全角かな</span></div>
+    <div class="stat"><span class="v" id="space">0</span><span class="k">半角スペース</span></div>
+    <div class="stat"><span class="v" id="crlf">0</span><span class="k">CRLF改行</span></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">X（Twitter）判定</h2>
+  <p id="xlimit" style="margin:0 0 8px;font-size:.95rem">—</p>
+  <p class="sub" style="margin:0">X は英数字を 1、それ以外（日本語・絵文字）を 2 と重み付けして 280 と比較します。単なる文字数では判定できません。</p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">「文字数」がズレる理由</h2>
+  <p style="font-size:.86rem;color:var(--mut);margin:0 0 6px">
+    同じ <code class="mono">👨‍👩‍👧</code> を例にすると、実際には複数のコードポイントが結合して1文字に見えています。
+  </p>
+  <ul style="font-size:.85rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>書記素</b> — 人間が「1文字」と知覚する単位。<b>日本語の原稿チェックはこれを使うのが正解</b></li>
+    <li><b>コードポイント</b> — Unicode の1文字。結合絵文字は複数になる</li>
+    <li><b>UTF-16 / バイト数</b> — プログラムやファイルサイズの単位。日本語は1文字3バイト</li>
+  </ul>
+  <p class="sub" style="margin:8px 0 0">「サロゲートペア余剰」が 0 より大きければ、絵文字や追加漢字が含まれています。</p>
+</section>

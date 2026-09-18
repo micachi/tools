@@ -1,0 +1,55 @@
+<h1>色・コントラスト検査</h1>
+<p class="lead">色の相互変換と、テキストが読みやすいかを WCAG 基準で自動判定します。「なんとなく暗い」を防ぐツールです。</p>
+
+<section class="panel">
+  <div class="swatch" id="swatch">Aa 文字の見え方</div>
+  <div class="row" style="margin-top:14px;justify-content:space-between">
+    <div>コントラスト比 <b id="ratio" style="color:var(--acc);font-size:1.15rem">—</b></div>
+    <div id="badges"></div>
+  </div>
+  <p class="sub" id="hint" style="margin:10px 0 0"></p>
+</section>
+
+<section class="panel">
+  <div class="field">
+    <label for="fgHex">前景色（テキスト）</label>
+    <div class="row">
+      <input type="text" id="fgHex" value="#E6EEF6" style="flex:1;min-width:140px" placeholder="#RRGGBB">
+      <input type="color" id="fgPick" value="#e6eef6" style="width:52px;height:38px;padding:2px;border:1px solid var(--line);border-radius:8px;background:#0d1017">
+    </div>
+    <p class="mono" id="fgOut" style="margin:7px 0 0;font-size:.82rem;color:var(--mut)"></p>
+  </div>
+  <div class="field">
+    <label for="bgHex">背景色</label>
+    <div class="row">
+      <input type="text" id="bgHex" value="#0D1017" style="flex:1;min-width:140px" placeholder="#RRGGBB">
+      <input type="color" id="bgPick" value="#0d1017" style="width:52px;height:38px;padding:2px;border:1px solid var(--line);border-radius:8px;background:#0d1017">
+    </div>
+    <p class="mono" id="bgOut" style="margin:7px 0 0;font-size:.82rem;color:var(--mut)"></p>
+  </div>
+  <div class="row">
+    <button id="swap" class="primary">前景 / 背景を入れ替え</button>
+    <button id="rand">ランダム配色</button>
+    <button id="copy">設定をコピー</button>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">判定基準（WCAG 2.1）</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:.86rem">
+    <thead><tr style="color:var(--mut);text-align:left">
+      <th style="padding:8px;border-bottom:1px solid var(--line)">基準</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">必要比</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">対象</th>
+    </tr></thead>
+    <tbody>
+      <tr><td style="padding:8px;border-bottom:1px solid var(--line)">AA 通常テキスト</td><td style="padding:8px;border-bottom:1px solid var(--line)">4.5:1 以上</td><td style="padding:8px;border-bottom:1px solid var(--line)">通常の本文</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid var(--line)">AA 拡大テキスト</td><td style="padding:8px;border-bottom:1px solid var(--line)">3:1 以上</td><td style="padding:8px;border-bottom:1px solid var(--line)">18px以上 / 太字14px以上</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid var(--line)">AAA</td><td style="padding:8px;border-bottom:1px solid var(--line)">7:1 以上</td><td style="padding:8px;border-bottom:1px solid var(--line)">最高水準（視覚配慮）</td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin:12px 0 0">
+    日本では高齢者利用や公共性のあるサイトでの AA 準拠が推奨されます。
+    コントラスト比は「相対輝度」から計算されるため、<b>見た目の明るさでは判断できません</b>。
+  </p>
+</section>

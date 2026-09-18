@@ -1,0 +1,48 @@
+<h1>QRコード生成</h1>
+<p class="lead">入力内容はブラウザ外に出ません。サーバーに送信されていないため、URL・個人情報・社内文書でも安全に生成できます。</p>
+
+<section class="panel">
+  <div class="field">
+    <label for="src">テキスト / URL</label>
+    <textarea id="src" placeholder="https://example.com&#10;日本語もそのまま使えます">https://micachi.github.io/tools/</textarea>
+  </div>
+  <div class="row" style="margin-bottom:16px">
+    <div style="flex:1;min-width:150px">
+      <div class="lb">復元レベル（高いほど壊れにくい／容量は減る）</div>
+      <select id="ecl">
+        <option value="L">L — 約7%復元（最も多く入る）</option>
+        <option value="M" selected>M — 約15%復元（推奨）</option>
+        <option value="Q">Q — 約25%復元</option>
+        <option value="H">H — 約30%復元（ロゴ重ね向け）</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div style="flex:1;min-width:150px">
+      <div class="lb">セルサイズ <b id="cellVal">6</b></div>
+      <input type="range" id="cell" min="2" max="16" value="6">
+    </div>
+    <div style="flex:1;min-width:150px">
+      <div class="lb">余白 <b id="marginVal">4</b></div>
+      <input type="range" id="margin" min="0" max="10" value="4">
+    </div>
+  </div>
+  <div class="row" style="margin-top:14px">
+    <button id="dl" class="primary" disabled>PNGダウンロード</button>
+    <span class="sub">※ 印刷・掲示用に。白背景必須（スキャナーは透明背景を読み取れません）</span>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="qrbox" id="qrbox"></div>
+  <p class="sub" id="info" style="text-align:center;margin:12px 0 0"></p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">復元レベルの選び方</h2>
+  <p style="font-size:.86rem;color:var(--mut);margin:0">
+    QRコードは汚れ・欠損を許容する設計で、レベルが高いほど壊れにくい代わりに格納できるデータが減ります。
+    画面表示なら <b>L</b>、印刷なら <b>M</b>、屋外や曲がる用紙なら <b>Q/H</b> が目安です。
+    中央にロゴを重ねる場合は最低でも <b>Q</b> を推奨します。
+  </p>
+</section>
