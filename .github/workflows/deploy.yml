@@ -18,10 +18,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: テスト（相互リンク・WCAG照合・QR生成）
-        run: node test.js
       - name: ビルド
         run: node build.mjs
+      - name: テスト（相互リンク・WCAG照合・QR生成）
+        run: node test.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
