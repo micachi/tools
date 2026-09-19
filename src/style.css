@@ -9,14 +9,31 @@ a{color:var(--acc);text-decoration:none}
 a:hover{text-decoration:underline}
 .wrap{max-width:860px;margin:0 auto;padding:0 16px 64px}
 
-/* 共通ナビ（相互リンクの中核） */
-.nav{position:sticky;top:0;z-index:10;background:rgba(13,16,23,.94);backdrop-filter:blur(8px);
-  border-bottom:1px solid var(--line);margin-bottom:28px}
-.nav-in{max-width:860px;margin:0 auto;padding:11px 16px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.nav-brand{font-weight:700;font-size:.92rem;letter-spacing:.04em;margin-right:8px;color:var(--fg)}
-.nav a{padding:5px 11px;border-radius:8px;font-size:.85rem;color:var(--mut);transition:.15s}
-.nav a:hover{background:#1c2330;color:var(--fg);text-decoration:none}
-.nav a.on{background:var(--acc);color:#08101e;font-weight:600}
+/* 共通ナビ（ドロップダウン＋カテゴリ分组） */
+.nav{position:sticky;top:0;z-index:50;background:rgba(13,16,23,.95);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);margin:0 0 28px}
+.nav-in{max-width:860px;margin:0 auto;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.nav-brand{font-weight:700;font-size:.92rem;letter-spacing:.04em;color:var(--fg);text-decoration:none;white-space:nowrap}
+.nav-brand:hover{color:var(--acc);text-decoration:none}
+.nav-cur{margin-left:auto;font-size:.85rem;color:var(--acc);font-weight:600;white-space:nowrap}
+@media(max-width:560px){.nav-cur{display:none}}
+
+.dd{position:relative}
+.dd-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:9px;
+  border:1px solid var(--line);background:#1c2330;color:var(--fg);font-size:.86rem;cursor:pointer;font-family:inherit}
+.dd-btn:hover{background:#242c3a;border-color:#33405a}
+.dd-btn .caret{font-size:.7rem;opacity:.8;transition:transform .18s}
+.dd-btn[aria-expanded="true"] .caret{transform:rotate(180deg)}
+.dd-menu{position:absolute;top:calc(100% + 8px);left:0;z-index:60;min-width:260px;
+  background:#161b24;border:1px solid #2b333f;border-radius:12px;padding:10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.5)}
+.dd-group{padding:6px 0}
+.dd-group + .dd-group{border-top:1px solid #232a36}
+.dd-cat{display:block;font-size:.7rem;color:var(--mut);letter-spacing:.08em;margin:0 0 4px 8px}
+.dd-menu a{display:block;padding:7px 10px;border-radius:8px;font-size:.87rem;color:var(--fg);text-decoration:none}
+.dd-menu a:hover{background:#212a37;color:var(--acc);text-decoration:none}
+.dd-menu a.on{background:var(--acc);color:#08101e;font-weight:600}
+.dd-menu a.on:hover{background:#6cabff;color:#08101e}
 
 h1{font-size:1.45rem;margin:0 0 6px}
 .lead{color:var(--mut);font-size:.9rem;margin:0 0 22px}

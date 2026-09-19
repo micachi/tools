@@ -28,19 +28,62 @@ const EXTERNAL = [
 ];
 const HUB = "tools";
 
+// カテゴリ分组（3×3）
+const CATEGORIES = [
+  { cat: "作成・生成", slugs: ["qr", "intunestart", "pwgen"] },
+  { cat: "検査・整形", slugs: ["mojicount", "color", "json"] },
+  { cat: "計算",     slugs: ["unit", "datecalc", "travel-budget"] },
+];
+const TITLE = {
+  qr: "QRコード生成", mojicount: "文字数カウンター", color: "色・コントラスト検査",
+  json: "JSON 整形・検証", unit: "単位変換", datecalc: "日付計算",
+  intunestart: "Intune スタートレイアウト",
+  pwgen: "パスワード一括生成", "travel-budget": "旅行予算シミュレーター",
+};
+
 // depth からの相対ベースを算出（GitHub Pages プロジェクトサイト対応）
 const baseFor = (depth) => "../".repeat(depth);
 
 function nav(active, depth) {
   const b = baseFor(depth);
-  const link = (href, label, on) =>
-    `<a href="${href}"${on ? ' class="on" aria-current="page"' : ""}>${label}</a>`;
+  const hrefOf = (slug) => {
+    if (slug === "pwgen") return "https://micachi.github.io/pwgen/";
+    if (slug === "travel-budget") return "https://micachi.github.io/travel-budget/";
+    return `${b}${slug}/`;
+  };
+  const cur = active === "index" ? "一覧" : (TITLE[active] || active);
+
+  const groups = CATEGORIES.map((g) => {
+    const items = g.slugs.map((s) => {
+      const on = s === active ? ' class="on" aria-current="page"' : "";
+      return `<a href="${hrefOf(s)}"${on}>${TITLE[s]}</a>`;
+    }).join("\n          ");
+    return `        <div class="dd-group"><span class="dd-cat">${g.cat}</span>
+          ${items}
+        </div>`;
+  }).join("\n");
+
   return `<nav class="nav"><div class="nav-in">
-  <span class="nav-brand">🧰 便利ツール</span>
-  ${link(b === "" ? "./" : b, "一覧", active === "index")}
-  ${TOOLS.map((t) => link(`${b}${t.slug}/`, t.title, active === t.slug)).join("\n  ")}
-  ${EXTERNAL.map((e) => link(e.url, e.title, active === e.title)).join("\n  ")}
-</div></nav>`;
+  <a class="nav-brand" href="${b || "./"}">🧰 便利ツール</a>
+  <div class="dd">
+    <button type="button" class="dd-btn" id="ddBtn" aria-expanded="false" aria-controls="ddMenu">ツールメニュー <span class="caret">▾</span></button>
+    <div class="dd-menu" id="ddMenu" role="menu" hidden>
+${groups}
+    </div>
+  </div>
+  <span class="nav-cur">${cur}</span>
+</div></nav>
+<script>
+(function(){
+  var btn=document.getElementById("ddBtn"), menu=document.getElementById("ddMenu");
+  if(!btn||!menu)return;
+  var open=function(){menu.hidden=false;btn.setAttribute("aria-expanded","true");};
+  var close=function(){menu.hidden=true;btn.setAttribute("aria-expanded","false");};
+  btn.addEventListener("click",function(e){e.stopPropagation();menu.hidden?open():close();});
+  document.addEventListener("click",function(e){if(!menu.contains(e.target)&&e.target!==btn)close();});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"){close();btn.focus();}});
+})();
+</script>`;
 }
 
 function footer(depth) {
