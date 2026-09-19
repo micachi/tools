@@ -17,7 +17,10 @@
       const qr = qrcode(0, ecl);            // 0 = 自動バージョン選択
       qr.addData(text);
       qr.make();
-      box.innerHTML = qr.createSvgTag({ cellSize: cell, margin: margin, scalable: true });
+      // scalable: true はルート <svg> に width/height を出さないため、
+      // fit-content の親で高さ 0 に潰れる。明示寸法を出す scalable: false を使い、
+      // レスポンシブな縮小は CSS (max-width:100%) で行う。
+      box.innerHTML = qr.createSvgTag({ cellSize: cell, margin: margin, scalable: false });
       const n = qr.getModuleCount();
       const ver = Math.round((n - 17) / 4); // バージョン = (モジュール数 - 17) / 4
       info.innerHTML = `バージョン ${ver} ／ ${n}×${n} モジュール ／ 復元レベル ${ecl} ／ 文字数 ${[...text].length}`;

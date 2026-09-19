@@ -61,8 +61,8 @@ button.primary:hover{background:#6cabff}
 .stat .k{font-size:.74rem;color:var(--mut)}
 
 /* QR */
-.qrbox{display:flex;justify-content:center;padding:18px;background:#fff;border-radius:12px;margin:0 auto;width:fit-content}
-.qrbox svg,.qrbox img{display:block;image-rendering:pixelated}
+.qrbox{display:flex;justify-content:center;padding:18px;background:#fff;border-radius:12px;margin:0 auto;width:fit-content;max-width:100%}
+.qrbox svg,.qrbox img{display:block;image-rendering:pixelated;max-width:100%;height:auto}
 
 /* 色 */
 .swatch{height:88px;border-radius:12px;border:1px solid var(--line);display:flex;align-items:center;

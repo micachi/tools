@@ -102,6 +102,30 @@ let threw = false;
 try { const qr = q(0, "H"); qr.addData("y".repeat(5000)); qr.make(); } catch { threw = true; }
 ok("容量超過は例外で検知できる", threw);
 
+// 回帰防止: ルート <svg> に明示的な width/height があること
+// （scalable:true だと属性が消え、fit-content の親で高さ0に潰れた）
+{
+  const qr = q(0, "M"); qr.addData("https://tools.wicachi.com/"); qr.make();
+  const svg = qr.createSvgTag({ cellSize: 6, margin: 4, scalable: false });
+  const root = svg.slice(0, svg.indexOf(">") + 1);
+  ok("SVGルートに width 属性がある", /\swidth="\d+px"/.test(root), (root.match(/\swidth="[^"]*"/)||["なし"])[0]);
+  ok("SVGルートに height 属性がある", /\sheight="\d+px"/.test(root), (root.match(/\sheight="[^"]*"/)||["なし"])[0]);
+  ok("viewBox も持つ", /viewBox="0 0 \d+ \d+"/.test(root));
+  const w = +(root.match(/\swidth="(\d+)px"/)||[])[1];
+  ok("寸法が cellSize から妥当に算出されている", w >= 21 * 2 && w <= 145 * 16 + 16 * 2, `width=${w}px`);
+}
+// qr.js が scalable:false を使っていること
+{
+  const qrjs = fs.readFileSync(path.join(__dirname, "src", "js", "qr.js"), "utf8");
+  // コメント内に語が現れるので、行コメントを落としてからコード本体だけ検査する
+  const code = qrjs.replace(/^\s*\/\/.*$/gm, "").replace(/[^:]\/\/[^/].*$/gm, "");
+  ok("qr.js が scalable: false を使用", /scalable:\s*false/.test(code));
+  ok("qr.js のコードに scalable: true が残っていない", !/scalable:\s*true/.test(code),
+    (code.match(/scalable:\s*\w+/g) || []).join(", ") || "該当なし");
+  const css = fs.readFileSync(path.join(__dirname, "src", "style.css"), "utf8");
+  ok("CSS に max-width:100% の縮小ガード", /\.qrbox svg[^}]*max-width:100%/.test(css) || /qrbox svg[\s\S]{0,120}max-width:100%/.test(css));
+}
+
 console.log("\n=== 6. 単位換算（定義値との照合） ===");
 {
   const defs = {
