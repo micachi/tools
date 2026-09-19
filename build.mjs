@@ -39,6 +39,7 @@ function nav(active, depth) {
   <span class="nav-brand">🧰 便利ツール</span>
   ${link(b === "" ? "./" : b, "一覧", active === "index")}
   ${TOOLS.map((t) => link(`${b}${t.slug}/`, t.title, active === t.slug)).join("\n  ")}
+  ${EXTERNAL.map((e) => link(e.url, e.title, active === e.title)).join("\n  ")}
 </div></nav>`;
 }
 
