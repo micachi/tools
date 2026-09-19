@@ -1,6 +1,9 @@
 :root{
   --bg:#0d1017; --panel:#151a23; --line:#232a36; --fg:#e6e9ee; --mut:#8b95a5;
   --acc:#4f9cff; --ok:#3ddc97; --warn:#ffb454; --bad:#ff6b6b;
+  /* ネイティブピッカー（date / color / スクロールバー）をダークテーマにする。
+     これが無いと input[type=date] のカレンダーだけ白背景で浮く。 */
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);line-height:1.7;
@@ -48,6 +51,50 @@ textarea{width:100%;min-height:130px;padding:11px;border-radius:9px;border:1px s
   background:#0d1017;color:var(--fg);font-size:.95rem;font-family:inherit;resize:vertical}
 input[type=text]{width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--line);
   background:#0d1017;color:var(--fg);font-size:.95rem}
+
+/* ── 日付入力（ネイティブピッカー）────────────────────────
+   type=date は未スタイル化だと「暗い背景に暗い文字＋見えないアイコン」になるため、
+   type=text と揃えた上で内部の各セグメントまで起こす。 */
+input[type=date]{
+  width:100%;padding:9px 11px;border-radius:8px;border:1px solid var(--line);
+  background:#0d1017;color:var(--fg);font-size:.95rem;font-family:inherit;
+  min-height:40px;accent-color:var(--acc);cursor:pointer;transition:.15s;
+  font-variant-numeric:tabular-nums;
+}
+input[type=date]:hover{border-color:#33405a;background:#0f131b}
+input[type=date]:focus{border-color:var(--acc);outline:none;background:#0f131b;
+  box-shadow:0 0 0 3px rgba(79,156,255,.16)}
+
+/* 年・月・日の各セグメント */
+input[type=date]::-webkit-datetime-edit{display:flex;align-items:center;color:var(--fg);padding:0}
+input[type=date]::-webkit-datetime-edit-fields-wrapper{padding:0}
+input[type=date]::-webkit-datetime-edit-text{color:#4d5a6e;padding:0 2px}
+input[type=date]::-webkit-datetime-edit-year-field,
+input[type=date]::-webkit-datetime-edit-month-field,
+input[type=date]::-webkit-datetime-edit-day-field{
+  color:var(--fg);border-radius:4px;padding:1px 3px;transition:.12s;
+}
+/* 編集中のセグメントを強調（未入力の淡い yyyy/mm/dd と区別する） */
+input[type=date]:focus::-webkit-datetime-edit-year-field,
+input[type=date]:focus::-webkit-datetime-edit-month-field,
+input[type=date]:focus::-webkit-datetime-edit-day-field{color:#fff}
+input[type=date]::-webkit-datetime-edit-ampm-field{color:var(--fg)}
+
+/* カレンダーアイコン：素まだとダーク背景で消えるので反転して見せる */
+input[type=date]::-webkit-calendar-picker-indicator{
+  filter:invert(1) brightness(.78);opacity:.75;cursor:pointer;
+  width:17px;height:17px;transition:.15s;border-radius:4px;
+}
+input[type=date]::-webkit-calendar-picker-indicator:hover{
+  opacity:1;filter:invert(1) brightness(1.15);
+  background:rgba(79,156,255,.18);
+}
+input[type=date]::-webkit-inner-spin-button{opacity:0;width:0}
+input[type=date]::-moz-focus-inner{border:0}
+/* Firefox はピッカーアイコンを filter できないため色だけ寄せる */
+@-moz-document url-prefix(){
+  input[type=date]{color-scheme:dark;padding:8px 11px}
+}
 input[type=range]{width:100%;accent-color:var(--acc);height:22px}
 select{padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#0d1017;color:var(--fg);font-size:.9rem}
 .checks{display:flex;flex-wrap:wrap;gap:9px 18px}

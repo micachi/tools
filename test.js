@@ -534,5 +534,26 @@ console.log("\n=== 17. HTML 属性の整合（引用符の欠落検出） ===");
     read("en/index.html").includes("<h1>Web Tools</h1>"));
 }
 
+console.log("\n=== 18. 日付入力のスタイル適用 ===");
+{
+  const read = (p) => fs.readFileSync(path.join(DIST, p), "utf8");
+  const cssHas = (p, re) => re.test(read(p));
+
+  for (const p of ["datecalc/index.html", "en/datecalc/index.html"]) {
+    ok(`${p}: input[type=date] に CSS が当たっている`, cssHas(p, /input\[type=date\]\s*\{/));
+    ok(`${p}: カレンダーアイコンの視認性対策あり`, cssHas(p, /calendar-picker-indicator/));
+    ok(`${p}: 年/月/日 セグメントのスタイルあり`, cssHas(p, /datetime-edit-year-field/));
+    ok(`${p}: ネイティブピッカーをダーク化 (color-scheme)`, cssHas(p, /color-scheme:\s*dark/));
+    ok(`${p}: フォーカスリング定義あり`, cssHas(p, /input\[type=date\]:focus[\s\S]{0,120}box-shadow/));
+  }
+
+  // type=date と type=text で見た目の高さが揃うこと（min-height を共有）
+  const css = read("datecalc/index.html");
+  ok("date 入力が min-height を持つ（他入力と高さを揃える）",
+    /input\[type=date\][\s\S]{0,400}?min-height:\s*40px/.test(css));
+  ok("date 入力が tabular-nums（桁が揃って見える）",
+    /input\[type=date\][\s\S]{0,400}?font-variant-numeric:\s*tabular-nums/.test(css));
+}
+
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);
 process.exit(fail ? 1 : 0);
