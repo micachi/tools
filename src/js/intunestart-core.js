@@ -102,7 +102,46 @@ const IJS = (() => {
     } catch { return false; }
   }
 
-  return { PIN_TYPES, PRESETS, KEYS, validatePin, validate, buildLayout, toJson, roundTripOk };
+  /**
+   * 既存 LayoutModification.json をエディタ用の pins 配列に逆変換する。
+   * 返り値: { pins, applyOnce, warnings }
+   */
+  function fromJson(text) {
+    const warnings = [];
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error("JSON として解析できません: " + (e.message || e));
+    }
+    if (!data || typeof data !== "object") throw new Error("トップレベルがオブジェクトではありません");
+    if (!Array.isArray(data.pinnedList)) throw new Error("pinnedList（配列）が見つかりません");
+
+    const applyOnce = data.applyOnce === true;
+    if (data.applyOnce === undefined) warnings.push("applyOnce が未指定でした（false として扱います）");
+
+    const pins = [];
+    data.pinnedList.forEach((entry, i) => {
+      const at = `ピン${i + 1}`;
+      if (!entry || typeof entry !== "object") { warnings.push(`${at}: オブジェクトではないため無視`); return; }
+      const keys = Object.keys(entry);
+      const known = keys.filter((k) => KEYS.includes(k));
+      if (known.length === 0) {
+        warnings.push(`${at}: 既知のキー（${KEYS.join(" / ")}）が無いため無視しました → ${keys.join(", ") || "空"}`);
+        return;
+      }
+      if (known.length > 1) warnings.push(`${at}: 複数のキーがあります（${known.join(", ")}）— 先頭のみ採用しました`);
+      const k = known[0];
+      const extra = keys.filter((x) => !KEYS.includes(x));
+      if (extra.length) warnings.push(`${at}: 未知のキーを省略しました → ${extra.join(", ")}`);
+      pins.push({ [k]: entry[k] });
+    });
+
+    if (!pins.length) throw new Error("読み込めるピンがありません");
+    return { pins, applyOnce, warnings };
+  }
+
+  return { PIN_TYPES, PRESETS, KEYS, validatePin, validate, buildLayout, toJson, roundTripOk, fromJson };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = IJS;

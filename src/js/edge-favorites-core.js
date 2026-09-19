@@ -85,7 +85,59 @@ const EFS = (() => {
     return { bookmarks, folders, maxDepth };
   }
 
-  return { DEFAULT_TOP, bookmark, folder, validateNode, validate, nodeToDict, build, toJson, roundTripOk, stats };
+  /**
+   * 既存 ManagedFavorites JSON をツリーに逆変換する。
+   * 返り値: { tree, toplevelName, warnings }
+   */
+  function fromJson(text) {
+    const warnings = [];
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error("JSON として解析できません: " + (e.message || e));
+    }
+    if (!Array.isArray(data)) throw new Error("トップレベルが配列ではありません（ManagedFavorites は配列が必須）");
+
+    let toplevelName = "";
+    const tree = [];
+
+    const conv = (dict, where) => {
+      if (!dict || typeof dict !== "object" || Array.isArray(dict)) {
+        warnings.push(`${where}: オブジェクトではないため無視しました`);
+        return null;
+      }
+      const keys = Object.keys(dict);
+      if (keys.includes("toplevel_name")) {
+        toplevelName = String(dict.toplevel_name || "");
+        return null;
+      }
+      if (!dict.name || !String(dict.name).trim()) {
+        warnings.push(`${where}: name が無いため無視しました`);
+        return null;
+      }
+      if (Array.isArray(dict.children)) {
+        const kids = dict.children.map((c, i) => conv(c, `${where} > ${dict.name}[${i}]`)).filter(Boolean);
+        if (kids.length === 0) warnings.push(`フォルダ「${dict.name}」は中身が空です`);
+        return folder(String(dict.name), kids);
+      }
+      if (typeof dict.url === "string" && dict.url.trim()) {
+        return bookmark(String(dict.name), dict.url);
+      }
+      warnings.push(`${where}「${dict.name}」: url も children も無く、フォルダとして扱いました（空）`);
+      return folder(String(dict.name), []);
+    };
+
+    data.forEach((d, i) => {
+      const n = conv(d, `要素${i + 1}`);
+      if (n) tree.push(n);
+    });
+
+    if (!tree.length) throw new Error("読み込めるお気に入りがありません");
+    return { tree, toplevelName, warnings };
+  }
+
+  return { DEFAULT_TOP, bookmark, folder, validateNode, validate, nodeToDict, build, toJson, roundTripOk, stats, fromJson };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = EFS;

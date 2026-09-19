@@ -18,6 +18,21 @@ Microsoft Intune の<b>設定カタログ「[スタート] のレイアウト」
 </section>
 
 <section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">📥 既存 JSON をインポート</h2>
+  <p class="sub" style="margin:0 0 10px"><code class="mono">Export-StartLayout</code> で書き出した既存の <code class="mono">LayoutModification.json</code> を読み込み、上のエディタで変更できる状態に戻します。</p>
+  <div class="field">
+    <label for="imp">JSON 内容</label>
+    <textarea id="imp" class="mono" style="min-height:130px" placeholder='{"applyOnce":false,"pinnedList":[{"packagedAppId":"..."}]}'></textarea>
+  </div>
+  <div class="row">
+    <button id="impBtn" class="primary">読み込んでエディタに反映</button>
+    <label class="filebtn"><input type="file" id="impFile" accept=".json,application/json" hidden>ファイルを選択</label>
+    <span class="sub" id="impName"></span>
+  </div>
+  <div id="impMsg" class="valid" style="margin-top:10px"></div>
+</section>
+
+<section class="panel">
   <div class="row" style="margin-bottom:14px">
     <div style="flex:1;min-width:220px">
       <div class="lb">よく使うアプリを素早く追加</div>

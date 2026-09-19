@@ -392,5 +392,60 @@ console.log("\n=== 14. Edge ManagedFavorites 生成 ===");
     oa[0].toplevel_name === "My managed favorites folder" && oa[3].children.length === 2);
 }
 
+console.log("\n=== 15. インポート（往復変換の可逆性） ===");
+{
+  const EFS = require(path.join(__dirname, "src", "js", "edge-favorites-core.js"));
+  const IJS = require(path.join(__dirname, "src", "js", "intunestart-core.js"));
+
+  /* --- Edge ManagedFavorites --- */
+  const t1 = [
+    EFS.bookmark("A", "a.example.com"),
+    EFS.folder("F", [EFS.bookmark("B", "b.example.com"), EFS.folder("G", [EFS.bookmark("C", "c.example.com")])]),
+  ];
+  const j1 = EFS.toJson(EFS.build(t1, "テストフォルダ"));
+  const r1 = EFS.fromJson(j1);
+  ok("Edge: 往復でツリー構造が一致",
+    JSON.stringify(r1.tree) === JSON.stringify(t1),
+    JSON.stringify(r1.tree).slice(0, 60));
+  ok("Edge: toplevel_name が復元される", r1.toplevelName === "テストフォルダ");
+  ok("Edge: 往復に警告なし", r1.warnings.length === 0, JSON.stringify(r1.warnings));
+
+  // 公式例のインポート
+  const officialJson = '[{"toplevel_name":"My managed favorites folder"},{"name":"Microsoft","url":"microsoft.com"},{"name":"Bing","url":"bing.com"},{"children":[{"name":"Microsoft Edge Insiders","url":"www.microsoftedgeinsider.com"},{"name":"Microsoft Edge","url":"www.microsoft.com/windows/microsoft-edge"}],"name":"Microsoft Edge links"}]';
+  const ro = EFS.fromJson(officialJson);
+  ok("Edge: 公式例をインポートできる", ro.tree.length === 3 && ro.toplevelName === "My managed favorites folder");
+  ok("Edge: 公式例の入れ子が復元", ro.tree[2].children.length === 2 && ro.tree[2].type === "folder");
+
+  ok("Edge: 不正 JSON で例外", (() => { try { EFS.fromJson("{bad"); return false; } catch { return true; } })());
+  ok("Edge: 配列以外で例外", (() => { try { EFS.fromJson('{"a":1}'); return false; } catch { return true; } })());
+  ok("Edge: 空配列で例外", (() => { try { EFS.fromJson("[]"); return false; } catch { return true; } })());
+  const rw = EFS.fromJson('[{"toplevel_name":"x"},{"name":"urlもchildrenも無い"}]');
+  ok("Edge: 不明項目は警告付きでフォルダ扱い", rw.warnings.length > 0 && rw.tree.length === 1,
+    rw.warnings.join("|"));
+
+  /* --- Intune StartLayout --- */
+  const p1 = [
+    { packagedAppId: "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" },
+    { desktopAppLink: "%APPDATA%\\x.lnk" },
+    { secondaryTile: { tileId: "t", arguments: " --pin-url=https://a.example", displayName: "d", packagedAppId: "p" } },
+  ];
+  const pj = IJS.toJson(IJS.buildLayout(p1, true));
+  const pr = IJS.fromJson(pj);
+  ok("Start: 往復で pins が一致", JSON.stringify(pr.pins) === JSON.stringify(p1), JSON.stringify(pr.pins).slice(0, 50));
+  ok("Start: applyOnce=true 復元", pr.applyOnce === true);
+  ok("Start: 往復に警告なし", pr.warnings.length === 0, JSON.stringify(pr.warnings));
+  ok("Start: applyOnce=false 復元",
+    IJS.fromJson(IJS.toJson(IJS.buildLayout(p1, false))).applyOnce === false);
+  ok("Start: applyOnce 未指定は警告", IJS.fromJson('{"pinnedList":[{"packagedAppId":"a!b"}]}').warnings.length > 0);
+  ok("Start: pinnedList 無しで例外",
+    (() => { try { IJS.fromJson('{"applyOnce":true}'); return false; } catch { return true; } })());
+  ok("Start: 既知キー無しは警告して除外",
+    (() => { const r = IJS.fromJson('{"applyOnce":false,"pinnedList":[{"unknownKey":"x"},{"packagedAppId":"a!b"}]}');
+      return r.warnings.length > 0 && r.pins.length === 1; })());
+  ok("Start: 余計なキーは警告して省略",
+    (() => { const r = IJS.fromJson('{"applyOnce":false,"pinnedList":[{"packagedAppId":"a!b","foo":"bar"}]}');
+      return r.warnings.some((w) => w.includes("foo")); })());
+}
+
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);
 process.exit(fail ? 1 : 0);

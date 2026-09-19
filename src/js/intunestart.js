@@ -133,6 +133,34 @@
     URL.revokeObjectURL(a.href);
   });
 
+  /* ---- インポート ---- */
+  function doImport(text) {
+    const msg = $("impMsg");
+    if (!text || !text.trim()) { msg.className = "valid err"; msg.textContent = "⚠ JSON を入力してください"; return; }
+    try {
+      const r = IJS.fromJson(text);
+      pins = r.pins;
+      $("applyOnce").checked = r.applyOnce;
+      render();
+      const w = r.warnings.length
+        ? `<br><span class="sub">注意: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
+      msg.className = "valid ok";
+      msg.innerHTML = `✓ 読み込み完了 — ピン ${pins.length} 件 ／ applyOnce=${r.applyOnce}${w}`;
+    } catch (e) {
+      msg.className = "valid err";
+      msg.innerHTML = "✕ " + esc(e.message || e);
+    }
+  }
+  $("impBtn").addEventListener("click", () => doImport($("imp").value));
+  $("impFile").addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => { $("imp").value = rd.result; $("impName").textContent = f.name; doImport(rd.result); };
+    rd.onerror = () => { $("impMsg").className = "valid err"; $("impMsg").textContent = "✕ ファイルを読み込めませんでした"; };
+    rd.readAsText(f, "utf-8");
+  });
+
   // 初期状態：ドキュメント例をそのまま载入
   pins = [
     { desktopAppLink: "%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Microsoft Edge.lnk" },

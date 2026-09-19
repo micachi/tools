@@ -120,6 +120,11 @@ th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line);font
 th{color:var(--mut);font-weight:600;font-size:.83rem}
 .num{text-align:right;font-variant-numeric:tabular-nums}
 
+/* インポート */
+.filebtn{display:inline-flex;align-items:center;padding:9px 15px;border-radius:9px;border:1px solid var(--line);
+  background:#1c2330;color:var(--fg);font-size:.88rem;cursor:pointer;transition:.15s}
+.filebtn:hover{background:#242c3a;border-color:#33405a}
+
 /* Edge マネージドお気に入りツリー */
 .treenode{margin:4px 0}
 .treerow{display:flex;gap:7px;align-items:center;background:#0f131b;border:1px solid var(--line);

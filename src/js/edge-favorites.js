@@ -119,6 +119,35 @@
     URL.revokeObjectURL(a.href);
   });
 
+  /* ---- インポート ---- */
+  function doImport(text) {
+    const msg = $("impMsg");
+    if (!text || !text.trim()) { msg.className = "valid err"; msg.textContent = "⚠ JSON を入力してください"; return; }
+    try {
+      const r = EFS.fromJson(text);
+      tree = r.tree;
+      $("topName").value = r.toplevelName || "";
+      render();
+      const st = EFS.stats(tree);
+      const w = r.warnings.length
+        ? `<br><span class="sub">注意: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
+      msg.className = "valid ok";
+      msg.innerHTML = `✓ 読み込み完了 — ブックマーク ${st.bookmarks} ／ フォルダ ${st.folders} ／ 最大 ${st.maxDepth} 階層${w}`;
+    } catch (e) {
+      msg.className = "valid err";
+      msg.innerHTML = "✕ " + esc(e.message || e);
+    }
+  }
+  $("impBtn").addEventListener("click", () => doImport($("imp").value));
+  $("impFile").addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => { $("imp").value = rd.result; $("impName").textContent = f.name; doImport(rd.result); };
+    rd.onerror = () => { $("impMsg").className = "valid err"; $("impMsg").textContent = "✕ ファイルを読み込めませんでした"; };
+    rd.readAsText(f, "utf-8");
+  });
+
   /* ---- 初期値（公式例をベースに実用形へ） ---- */
   $("topName").value = "会社指定のお気に入り";
   tree = [
