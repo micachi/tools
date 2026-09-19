@@ -201,5 +201,41 @@ console.log("\n=== 8. Intune スタートレイアウト JSON 生成 ===");
     badPresets.length ? badPresets.map((p) => p.name).join(",") : IJS.PRESETS.length + " 件すべて OK");
 }
 
+console.log("\n=== 9. DOM ID 整合性（JS が参照する id が HTML に実在するか） ===");
+{
+  // 今回不具合になった「存在しない要素を触る」系統を構造的に潰す
+  const fs2 = require("fs");
+  const jsDir = path.join(__dirname, "src", "js");
+  const pgDir = path.join(__dirname, "src", "pages");
+  const skip = ["intunestart-core.js"]; // DOM 非依存のコアロジック
+
+  const jsFiles = fs2.readdirSync(jsDir).filter((f) => f.endsWith(".js") && !skip.includes(f));
+  ok("対象 JS を検出", jsFiles.length >= 7, jsFiles.length + " 件");
+
+  let totalRefs = 0, allGood = true;
+  const problems = [];
+  for (const f of jsFiles) {
+    const slug = f.replace(/\.js$/, "");
+    const pagePath = path.join(pgDir, slug + ".html");
+    if (!fs2.existsSync(pagePath)) { problems.push(`${f}: 対応するページ ${slug}.html がない`); allGood = false; continue; }
+    const js = fs2.readFileSync(path.join(jsDir, f), "utf8");
+    const html = fs2.readFileSync(pagePath, "utf8");
+
+    const ids = new Set();
+    for (const m of js.matchAll(/\$\("([A-Za-z][A-Za-z0-9_-]*)"\)/g)) ids.add(m[1]);
+    for (const m of js.matchAll(/getElementById\("([A-Za-z][A-Za-z0-9_-]*)"\)/g)) ids.add(m[1]);
+    totalRefs += ids.size;
+
+    const missing = [...ids].filter((id) => !new RegExp(`id="${id}"`).test(html));
+    if (missing.length) { problems.push(`${f} → 存在しない id: ${missing.join(", ")}`); allGood = false; }
+  }
+  ok("全 JS の DOM 参照がページ側に実在", allGood,
+    allGood ? `${totalRefs} 箇所すべて解決` : problems.join(" / "));
+
+  // 前回バグの回帰確認
+  const qrjs = fs2.readFileSync(path.join(jsDir, "qr.js"), "utf8");
+  ok("qr.js に dlhref への死んだ参照が残っていない", !qrjs.includes("dlhref"));
+}
+
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);
 process.exit(fail ? 1 : 0);

@@ -1,6 +1,7 @@
 (() => {
   "use strict";
   const $ = (id) => document.getElementById(id);
+  const escHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   function render() {
     const text = $("src").value;
@@ -21,11 +22,20 @@
       const ver = Math.round((n - 17) / 4); // バージョン = (モジュール数 - 17) / 4
       info.innerHTML = `バージョン ${ver} ／ ${n}×${n} モジュール ／ 復元レベル ${ecl} ／ 文字数 ${[...text].length}`;
       $("dl").disabled = false;
-      $("dlhref").dataset.ready = "1";
     } catch (e) {
+      // 注意: このベンダーは Error ではなく「文字列」を throw する。
+      // 容量超過と プログラムミス を混同すると原因究明ができなくなるので分離する。
+      const msg = (typeof e === "string" ? e : (e && e.message) || String(e));
       box.innerHTML = "";
-      info.innerHTML = `<span class="err">⚠ 生成できませんでした（長すぎる可能性があります: ${e.message}）</span>`;
       $("dl").disabled = true;
+      if (/code length overflow|length over/i.test(msg)) {
+        info.innerHTML = `<span class="err">⚠ データが多すぎます — ${escHtml(msg)}</span>` +
+          `<br><span class="sub">対策: 復元レベルを下げる（L 寄りにする）／テキストを短くする／URL を短縮する</span>`;
+      } else {
+        info.innerHTML = `<span class="err">⚠ 想定外のエラー: ${escHtml(msg)}</span>`;
+        if (typeof console !== "undefined") console.error("[qr] unexpected error", e);
+      }
+      return;
     }
   }
 
