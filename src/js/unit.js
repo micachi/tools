@@ -2,6 +2,28 @@
   "use strict";
   const $ = (id) => document.getElementById(id);
 
+  // 和単位は英語圏でも名称が通らないためローマ字を併記する
+  const JP_EN = {
+    "リ": "ri", "間": "ken", "町": "chō",
+    "匁": "mon", "貫": "kan",
+    "a (アール)": "are", "坪": "tsubo", "反": "tan",
+    "合": "gō", "升": "shō", "斗": "to", "石": "koku",
+    "knot (ノット)": "knot", "ノット": "knot",
+    "月(30日)": "month (30d)", "年(365日)": "year (365d)",
+  };
+  const disp = (u) => (__LANG === "en" ? (JP_EN[u] || u) : u);
+
+  const L = __loc({
+    ja: {
+      cats: { length: "長さ", mass: "重さ", area: "面積", volume: "容量", temp: "温度", data: "データ容量", speed: "速さ", time: "時間" },
+      needNum: "数値を入力してください", kelvin: "K（ケルビン）", loc: "ja-JP",
+    },
+    en: {
+      cats: { length: "Length", mass: "Mass", area: "Area", volume: "Volume", temp: "Temperature", data: "Data size", speed: "Speed", time: "Time" },
+      needNum: "Enter a number", kelvin: "K (kelvin)", loc: "en-US",
+    },
+  });
+
   // 基準単位（カテゴリ内で1つ）に対する係数
   const CATS = {
     length: { label: "長さ", base: "m", units: {
@@ -42,8 +64,8 @@
     const a = Math.abs(n);
     if (a === 0) return "0";
     if (a >= 1e15 || a < 1e-6) return n.toExponential(6);
-    if (a >= 1) return n.toLocaleString("ja-JP", { maximumFractionDigits: 6 });
-    return n.toLocaleString("ja-JP", { maximumFractionDigits: 10 });
+    if (a >= 1) return n.toLocaleString(L.loc, { maximumFractionDigits: 6 });
+    return n.toLocaleString(L.loc, { maximumFractionDigits: 10 });
   };
 
   // 温度は係数では表せない（オフセットあり）ので特別扱い
@@ -60,7 +82,7 @@
     const c = CATS[cat];
     Object.keys(c.units).forEach((u) => {
       const o = document.createElement("option");
-      o.value = u; o.textContent = u;
+      o.value = u; o.textContent = disp(u);
       if (u === c.base) o.selected = true;
       sel.appendChild(o);
     });
@@ -69,14 +91,14 @@
   function render() {
     const v = parseFloat($("val").value);
     const grid = $("grid");
-    if (!isFinite(v)) { grid.innerHTML = '<p class="sub">数値を入力してください</p>'; return; }
+    if (!isFinite(v)) { grid.innerHTML = `<p class="sub">${L.needNum}</p>`; return; }
 
     if (cat === "temp") {
       const r = convertTemp(v, $("from").value);
       grid.innerHTML = `
         <div class="stat"><span class="v">${fmt(r.C)}</span><span class="k">℃</span></div>
         <div class="stat"><span class="v">${fmt(r.F)}</span><span class="k">℉</span></div>
-        <div class="stat"><span class="v">${fmt(r.K)}</span><span class="k">K（ケルビン）</span></div>`;
+        <div class="stat"><span class="v">${fmt(r.K)}</span><span class="k">${L.kelvin}</span></div>`;
       return;
     }
 
@@ -84,7 +106,7 @@
     const from = $("from").value;
     const baseVal = v * c.units[from];
     grid.innerHTML = Object.entries(c.units)
-      .map(([u, f]) => `<div class="stat"><span class="v">${fmt(baseVal / f)}</span><span class="k">${u}</span></div>`)
+      .map(([u, f]) => `<div class="stat"><span class="v">${fmt(baseVal / f)}</span><span class="k">${disp(u)}</span></div>`)
       .join("");
   }
 

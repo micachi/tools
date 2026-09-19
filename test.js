@@ -13,10 +13,10 @@ const ok = (name, cond, extra = "") => {
 };
 
 console.log("\n=== 1. 成果物の存在 ===");
-const pages = ["index.html", "qr/index.html", "mojicount/index.html", "color/index.html",
-               "json/index.html", "unit/index.html", "datecalc/index.html", "intunestart/index.html",
-               "password/index.html", "travel/index.html",
-               "travel/bali/index.html", "travel/honolulu/index.html", "travel/paris/index.html"];
+const SLUGS = ["qr", "mojicount", "color", "json", "unit", "datecalc", "intunestart", "password", "edge-favorites"];
+const pages = ["index.html", "en/index.html"]
+  .concat(SLUGS.map((s) => `${s}/index.html`))
+  .concat(SLUGS.map((s) => `en/${s}/index.html`));
 for (const p of pages) {
   const f = path.join(DIST, p);
   ok(p + " が存在し 5KB 超", fs.existsSync(f) && fs.statSync(f).size > 5000,
@@ -38,7 +38,7 @@ console.log("\n=== 1b. 新ツールの必須要素 ===");
 
 console.log("\n=== 2. 相互リンク構造（全ページが他全ページへ参照） ===");
 const targets = ["qr/", "mojicount/", "color/", "json/", "unit/", "datecalc/",
-                "intunestart/", "password/", "travel/"];
+                "intunestart/", "password/", "edge-favorites/"];
 for (const p of pages) {
   const h = fs.readFileSync(path.join(DIST, p), "utf8");
   const missing = targets.filter((t) => !h.includes(t));
@@ -445,6 +445,47 @@ console.log("\n=== 15. インポート（往復変換の可逆性） ===");
   ok("Start: 余計なキーは警告して省略",
     (() => { const r = IJS.fromJson('{"applyOnce":false,"pinnedList":[{"packagedAppId":"a!b","foo":"bar"}]}');
       return r.warnings.some((w) => w.includes("foo")); })());
+}
+
+console.log("\n=== 16. 多言語化（ja / en） ===");
+{
+  const read = (p) => fs.readFileSync(path.join(DIST, p), "utf8");
+
+  for (const s of SLUGS) {
+    const ja = read(`${s}/index.html`), en = read(`en/${s}/index.html`);
+    ok(`${s}: JA は lang="ja"`, ja.includes('<html lang="ja">'));
+    ok(`${s}: EN は lang="en"`, en.includes('<html lang="en">'));
+    ok(`${s}: 両方に hreflang ja/en/x-default`,
+      ["ja", "en", "x-default"].every((h) => ja.includes(`hreflang="${h}"`) && en.includes(`hreflang="${h}"`)));
+    ok(`${s}: 言語切替リンクが相互に向かう`,
+      ja.includes(`href="/en/${s}/"`) && en.includes(`href="/${s}/"`));
+    ok(`${s}: 広告ラベルが言語正しい`,
+      ja.includes('class="adlabel">広告<') && en.includes('class="adlabel">Advertisement<'));
+    ok(`${s}: EN に日本語ナビが残っていない`, !en.includes("便利ツール") && !en.includes("ツールメニュー"));
+  }
+
+  const hubJa = read("index.html"), hubEn = read("en/index.html");
+  ok("ハブ: 言語切替が /en/ ↔ /", hubJa.includes('href="/en/"') && hubEn.includes('href="/"'));
+  ok("ハブ: EN に 9 ツールすべてへのリンク",
+    SLUGS.every((s) => hubEn.includes(`href="./${s}/"`)));
+
+  // 旧 travel は削除 → リダイレクトのみ
+  ok("travel: 旧都市ページはリダイレクト扱い（noindex）",
+    fs.existsSync(path.join(DIST, "travel/bali/index.html")) &&
+    read("travel/bali/index.html").includes('content="noindex"'));
+  ok("travel: 全旧 URL が / へ refresh", ["", "bali/", "paris/", "sydney/", "taipei/"].every((c) =>
+    read(`travel/${c}index.html`).includes('http-equiv="refresh" content="0; url=/"')));
+  ok("travel: ナビから完全に消えている",
+    !hubJa.includes('href="./travel/"') && !hubEn.includes('href="./travel/"') &&
+    !read("qr/index.html").includes("旅行予算"));
+
+  // 日付入力が date 型
+  for (const p of ["datecalc/index.html", "en/datecalc/index.html"]) {
+    const h = read(p);
+    ok(`${p}: 日付入力が type="date"`,
+      ["base", "d1", "d2", "birth"].every((id) => h.includes(`<input type="date" id="${id}">`)));
+    ok(`${p}: 旧テキスト入力形式が残っていない`, !/id="(base|d1|d2|birth)" placeholder="YYYY-MM-DD"/.test(h));
+  }
 }
 
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);

@@ -1,0 +1,52 @@
+<h1>Date Calculator</h1>
+<p class="lead">"What date is N days from now?" and "How far apart are these two dates?" — done reliably. Inputs use a calendar picker (<code class="mono">input type="date"</code>), and internally everything is <b>normalised to UTC</b> to remove timezone and daylight-saving drift.</p>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:12px">
+    <div style="flex:1;min-width:170px">
+      <div class="lb">Base date</div>
+      <input type="date" id="base">
+    </div>
+    <div style="flex:1;min-width:120px">
+      <div class="lb">Days to add (negative for past)</div>
+      <input type="text" id="offset" value="30" inputmode="numeric">
+    </div>
+    <div style="align-self:flex-end"><button id="today" class="primary">Set today</button></div>
+  </div>
+  <p id="offOut" style="margin:0;font-size:.95rem"></p>
+</section>
+
+<section class="panel">
+  <div class="row">
+    <div style="flex:1;min-width:170px">
+      <div class="lb">Date A</div>
+      <input type="date" id="d1">
+    </div>
+    <div style="flex:1;min-width:170px">
+      <div class="lb">Date B</div>
+      <input type="date" id="d2">
+    </div>
+  </div>
+  <div id="diffOut" style="margin-top:14px"></div>
+</section>
+
+<section class="panel">
+  <div class="field" style="margin-bottom:8px">
+    <label for="birth">Exact age</label>
+    <input type="date" id="birth">
+  </div>
+  <p id="ageOut" style="margin:0;font-size:.95rem"></p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">Classic date-arithmetic bugs</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>Time zones</b> — dividing a local-time millisecond difference by <code class="mono">86400000</code> <b>shifts by a day</b> across a DST boundary. Only avoided by normalising to UTC</li>
+    <li><b>Non-existent dates</b> — if you don't reject 30 February, it silently rolls over and produces a wrong answer</li>
+    <li><b>"One month later"</b> — one month after 31 January is 28 (or 29) February. Without a fixed rule, implementations disagree</li>
+    <li><b>Public holidays</b> — this tool's business-day count <b>excludes weekends only</b>. Add a holiday table if you need real-world accuracy</li>
+  </ul>
+  <p class="sub" style="margin:10px 0 0">
+    The calendar picker renders according to your OS/browser locale, but the <b>value is always <code class="mono">YYYY-MM-DD</code></b>, so results never depend on locale.
+  </p>
+</section>

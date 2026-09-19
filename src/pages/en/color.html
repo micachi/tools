@@ -1,0 +1,55 @@
+<h1>Color &amp; Contrast Checker</h1>
+<p class="lead">Convert between color formats and automatically judge text readability against WCAG. A tool to stop "it looks a bit dark" from shipping.</p>
+
+<section class="panel">
+  <div class="swatch" id="swatch">Aa how text will look</div>
+  <div class="row" style="margin-top:14px;justify-content:space-between">
+    <div>Contrast ratio <b id="ratio" style="color:var(--acc);font-size:1.15rem">—</b></div>
+    <div id="badges"></div>
+  </div>
+  <p class="sub" id="hint" style="margin:10px 0 0"></p>
+</section>
+
+<section class="panel">
+  <div class="field">
+    <label for="fgHex">Foreground (text)</label>
+    <div class="row">
+      <input type="text" id="fgHex" value="#E6EEF6" style="flex:1;min-width:140px" placeholder="#RRGGBB">
+      <input type="color" id="fgPick" value="#e6eef6" style="width:52px;height:38px;padding:2px;border:1px solid var(--line);border-radius:8px;background:#0d1017">
+    </div>
+    <p class="mono" id="fgOut" style="margin:7px 0 0;font-size:.82rem;color:var(--mut)"></p>
+  </div>
+  <div class="field">
+    <label for="bgHex">Background</label>
+    <div class="row">
+      <input type="text" id="bgHex" value="#0D1017" style="flex:1;min-width:140px" placeholder="#RRGGBB">
+      <input type="color" id="bgPick" value="#0d1017" style="width:52px;height:38px;padding:2px;border:1px solid var(--line);border-radius:8px;background:#0d1017">
+    </div>
+    <p class="mono" id="bgOut" style="margin:7px 0 0;font-size:.82rem;color:var(--mut)"></p>
+  </div>
+  <div class="row">
+    <button id="swap" class="primary">Swap foreground / background</button>
+    <button id="rand">Random palette</button>
+    <button id="copy">Copy settings</button>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Criteria (WCAG 2.1)</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:.86rem">
+    <thead><tr style="color:var(--mut);text-align:left">
+      <th style="padding:8px;border-bottom:1px solid var(--line)">Criterion</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">Required ratio</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">Applies to</th>
+    </tr></thead>
+    <tbody>
+      <tr><td style="padding:8px;border-bottom:1px solid var(--line)">AA normal text</td><td style="padding:8px;border-bottom:1px solid var(--line)">4.5:1 or higher</td><td style="padding:8px;border-bottom:1px solid var(--line)">Regular body copy</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid var(--line)">AA large text</td><td style="padding:8px;border-bottom:1px solid var(--line)">3:1 or higher</td><td style="padding:8px;border-bottom:1px solid var(--line)">≥18px, or ≥14px bold</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid var(--line)">AAA</td><td style="padding:8px;border-bottom:1px solid var(--line)">7:1 or higher</td><td style="padding:8px;border-bottom:1px solid var(--line)">Highest level (accessibility-critical)</td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin:12px 0 0">
+    AA compliance is recommended for public services and sites used by older readers.
+    Because the ratio is derived from <b>relative luminance</b>, <b>you cannot judge it by perceived brightness</b>.
+  </p>
+</section>

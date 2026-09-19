@@ -1,0 +1,50 @@
+<h1>Character Counter</h1>
+<p class="lead">Counts as you type. "One character" means different things depending on how you count, so several measures are shown side by side.</p>
+
+<section class="panel">
+  <div class="field">
+    <label for="src">Text</label>
+    <textarea id="src" placeholder="Type or paste text here" style="min-height:150px"></textarea>
+  </div>
+  <div class="row">
+    <button id="half" class="primary">Full-width → half-width</button>
+    <button id="copy">Copy</button>
+    <button id="clear">Clear</button>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="stats">
+    <div class="stat"><span class="v" id="g">0</span><span class="k">Characters (graphemes)</span></div>
+    <div class="stat"><span class="v" id="cp">0</span><span class="k">Code points</span></div>
+    <div class="stat"><span class="v" id="lines">0</span><span class="k">Lines</span></div>
+    <div class="stat"><span class="v" id="words">0</span><span class="k">Words</span></div>
+    <div class="stat"><span class="v" id="u8">0</span><span class="k">UTF-8 bytes</span></div>
+  </div>
+  <div class="stats" style="margin-top:10px">
+    <div class="stat"><span class="v" id="fullAlpha">0</span><span class="k">Full-width alphanumerics</span></div>
+    <div class="stat"><span class="v" id="halfAlpha">0</span><span class="k">Half-width alphanumerics</span></div>
+    <div class="stat"><span class="v" id="fullKana">0</span><span class="k">Full-width kana</span></div>
+    <div class="stat"><span class="v" id="space">0</span><span class="k">Half-width spaces</span></div>
+    <div class="stat"><span class="v" id="crlf">0</span><span class="k">CRLF line endings</span></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">X (Twitter) limit check</h2>
+  <p id="xlimit" style="margin:0 0 8px;font-size:.95rem">—</p>
+  <p class="sub" style="margin:0">X weights Latin letters and digits as 1 and everything else (CJK, emoji) as 2, then compares against 280. A plain character count cannot tell you whether a post fits.</p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">Why "character count" disagrees</h2>
+  <p style="font-size:.86rem;color:var(--mut);margin:0 0 6px">
+    Take <code class="mono">👨‍👩‍👧</code> as an example: it is several code points joined together to look like one character.
+  </p>
+  <ul style="font-size:.85rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>Grapheme</b> — the unit a human perceives as one character. <b>This is the right measure for copy and manuscript checks</b></li>
+    <li><b>Code point</b> — one Unicode character; combined emoji count as several</li>
+    <li><b>UTF-16 units / bytes</b> — units for programs and file sizes; CJK is 3 bytes per character in UTF-8</li>
+  </ul>
+  <p class="sub" style="margin:8px 0 0">If "surrogate-pair surplus" is greater than 0, the text contains emoji or CJK extension characters.</p>
+</section>

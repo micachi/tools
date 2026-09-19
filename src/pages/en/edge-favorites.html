@@ -1,0 +1,77 @@
+<h1>Edge Managed Favorites Generator</h1>
+<p class="lead">Generate <code class="mono">ManagedFavorites</code> policy JSON for Microsoft Edge by editing a folder tree.
+Paste it straight into the <b>Intune settings catalog: "Configure favorites"</b>.</p>
+
+<section class="panel">
+  <div class="field">
+    <label for="topName">Top-level folder name (<code class="mono">toplevel_name</code>)</label>
+    <input type="text" id="topName" placeholder="Default: Managed favorites">
+    <p class="sub" style="margin:7px 0 0">If omitted, the default name <b>Managed favorites</b> is used. Users <b>cannot modify</b> this folder (though they can hide it from the favorites bar).</p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:14px">
+    <button id="ab" class="primary">＋ Bookmark</button>
+    <button id="af">＋ Folder</button>
+    <button id="clear">Clear all</button>
+    <span class="sub">Use ＋🔖 / ＋📁 on a folder to nest inside it</span>
+  </div>
+  <div id="tree"></div>
+</section>
+
+<section class="panel">
+  <div id="validation" class="valid"></div>
+  <div class="field" style="margin-top:12px">
+    <label for="out">JSON　<span class="sub">— editable. Paste existing JSON here to load it into the tree above</span></label>
+    <textarea id="out" class="mono" style="min-height:280px" spellcheck="false"></textarea>
+  </div>
+  <div class="row">
+    <button id="cp" class="primary">Copy JSON</button>
+    <button id="dl">Save ManagedFavorites.json</button>
+    <label class="filebtn"><input type="file" id="impFile" accept=".json,application/json" hidden>Load file</label>
+    <span class="sub" id="impName"></span>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Schema</h2>
+  <p style="font-size:.86rem;margin:0 0 8px">Each element of the array is one of the following. <b>A folder has no <code class="mono">url</code> key and instead carries <code class="mono">children</code></b> — this distinction is mandatory.</p>
+  <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+    <thead><tr style="color:var(--mut);text-align:left">
+      <th style="padding:8px;border-bottom:1px solid var(--line)">Key</th><th style="padding:8px;border-bottom:1px solid var(--line)">Meaning</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">toplevel_name</td><td style="padding:8px;border-bottom:1px solid var(--line)">Name of the containing folder (exactly one, anywhere in the array)</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">name + url</td><td style="padding:8px;border-bottom:1px solid var(--line)">A bookmark</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">name + children</td><td style="padding:8px;border-bottom:1px solid var(--line)">A subfolder (nesting recurses)</td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin:10px 0 0">
+    URLs without a scheme are completed by Edge exactly as if typed in the address bar (<code class="mono">microsoft.com</code> → <code class="mono">https://microsoft.com/</code>).
+  </p>
+</section>
+
+<section class="panel warnbox">
+  <h2 style="font-size:1rem;margin:0 0 8px">⚠ Read before deploying</h2>
+  <ul style="font-size:.86rem;margin:0;padding-left:20px">
+    <li><b>Cannot be used as a "Recommended" policy</b> — mandatory only. Configuring it as a recommended value is <b>unsupported</b></li>
+    <li><b>Does not apply to profiles signed in with a Microsoft account</b> — an Edge 116+ restriction. It will not land on personal-MSA profiles, so design for <b>Entra ID joined / WorkProfile</b></li>
+    <li><b>Not synced to the user account</b> — deliberately out of sync scope, and extensions cannot modify it either</li>
+    <li><b>Users cannot edit the folder but can hide it</b> — if they choose not to show it, you cannot detect that</li>
+    <li><b>Supported versions</b> — Windows ≥ 77 / macOS ≥ 77 / Android ≥ 30 / iOS ≥ 85</li>
+    <li><b>Dynamic policy refresh</b> — supported; applies without waiting for re-login</li>
+  </ul>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">Where to put it in Intune</h2>
+  <ol style="font-size:.86rem;margin:0;padding-left:20px">
+    <li>Intune admin center → <b>Devices → Configuration policies → Create → Windows 10 and later</b></li>
+    <li>Search the settings catalog for <b>"Configure favorites"</b> (<code class="mono">ManagedFavorites</code>)</li>
+    <li>Paste the generated JSON → assign to your target group</li>
+  </ol>
+  <p class="sub" style="margin:10px 0 0">
+    Reference: <a href="https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/managedfavorites" rel="noopener">Microsoft Learn — ManagedFavorites policy</a>
+  </p>
+</section>

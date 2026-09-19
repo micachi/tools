@@ -3,11 +3,31 @@
   const $ = (id) => document.getElementById(id);
   const escHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
+  const STR = {
+    ja: {
+      empty: "テキストまたはURLを入力してください",
+      info: (ver, n, ecl, len) => `バージョン ${ver} ／ ${n}×${n} モジュール ／ 復元レベル ${ecl} ／ 文字数 ${len}`,
+      tooMuch: "⚠ データが多すぎます",
+      tooMuchHint: "対策: 復元レベルを下げる（L 寄りにする）／テキストを短くする／URL を短縮する",
+      unexpected: "⚠ 想定外のエラー",
+      pngFail: "⚠ PNG変換に失敗しました",
+    },
+    en: {
+      empty: "Enter text or a URL",
+      info: (ver, n, ecl, len) => `Version ${ver} ／ ${n}×${n} modules ／ EC level ${ecl} ／ ${len} characters`,
+      tooMuch: "⚠ Too much data",
+      tooMuchHint: "Fix: lower the error-correction level (toward L) ／ shorten the text ／ use a shorter URL",
+      unexpected: "⚠ Unexpected error",
+      pngFail: "⚠ PNG conversion failed",
+    },
+  };
+  const L = STR[((typeof document !== "undefined" && document.documentElement.getAttribute("lang")) || "ja")] || STR.ja;
+
   function render() {
     const text = $("src").value;
     const box = $("qrbox");
     const info = $("info");
-    if (!text) { box.innerHTML = ""; info.textContent = "テキストまたはURLを入力してください"; return; }
+    if (!text) { box.innerHTML = ""; info.textContent = L.empty; return; }
 
     const ecl = $("ecl").value;
     const cell = +$("cell").value;
@@ -23,7 +43,7 @@
       box.innerHTML = qr.createSvgTag({ cellSize: cell, margin: margin, scalable: false });
       const n = qr.getModuleCount();
       const ver = Math.round((n - 17) / 4); // バージョン = (モジュール数 - 17) / 4
-      info.innerHTML = `バージョン ${ver} ／ ${n}×${n} モジュール ／ 復元レベル ${ecl} ／ 文字数 ${[...text].length}`;
+      info.innerHTML = L.info(ver, n, ecl, [...text].length);
       $("dl").disabled = false;
     } catch (e) {
       // 注意: このベンダーは Error ではなく「文字列」を throw する。
@@ -32,10 +52,10 @@
       box.innerHTML = "";
       $("dl").disabled = true;
       if (/code length overflow|length over/i.test(msg)) {
-        info.innerHTML = `<span class="err">⚠ データが多すぎます — ${escHtml(msg)}</span>` +
-          `<br><span class="sub">対策: 復元レベルを下げる（L 寄りにする）／テキストを短くする／URL を短縮する</span>`;
+        info.innerHTML = `<span class="err">${L.tooMuch} — ${escHtml(msg)}</span>` +
+          `<br><span class="sub">${L.tooMuchHint}</span>`;
       } else {
-        info.innerHTML = `<span class="err">⚠ 想定外のエラー: ${escHtml(msg)}</span>`;
+        info.innerHTML = `<span class="err">${L.unexpected}: ${escHtml(msg)}</span>`;
         if (typeof console !== "undefined") console.error("[qr] unexpected error", e);
       }
       return;
@@ -63,7 +83,7 @@
       a.download = "qrcode.png";
       a.click();
     };
-    img.onerror = () => { $("info").innerHTML = '<span class="err">⚠ PNG変換に失敗しました</span>'; };
+    img.onerror = () => { $("info").innerHTML = `<span class="err">${L.pngFail}</span>`; };
     img.src = url;
   }
 

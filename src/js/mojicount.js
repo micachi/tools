@@ -2,6 +2,19 @@
   "use strict";
   const $ = (id) => document.getElementById(id);
 
+  const L = __loc({
+    ja: {
+      ok: "X(Twitter) 投稿可", over: "X(Twitter) 超過", weightLabel: "重み",
+      left: (n) => `（残り ${n}）`, excess: (n) => `（${n} 多い）`,
+      copied: "✓ コピー完了", copy: "コピー",
+    },
+    en: {
+      ok: "fits in X (Twitter)", over: "over the X (Twitter) limit", weightLabel: "Weight",
+      left: (n) => ` (${n} left)`, excess: (n) => ` (${n} over)`,
+      copied: "✓ Copied", copy: "Copy",
+    },
+  });
+
   const utf8Bytes = (s) => new TextEncoder().encode(s).length;
   const sjisBytes = (s) => {
     try { return new TextEncoder().encode(s).length; } catch { return s.length; }
@@ -42,9 +55,9 @@
     const el = $("xlimit");
     if (!s) { el.innerHTML = '<span class="sub">—</span>'; }
     else if (weight <= limit) {
-      el.innerHTML = `<span class="ok">✓ X(Twitter) 投稿可</span> <span class="sub">重み ${weight} / ${limit}（残り ${limit - weight}）</span>`;
+      el.innerHTML = `<span class="ok">✓ ${L.ok}</span> <span class="sub">${L.weightLabel} ${weight} / ${limit}${L.left(weight === limit ? 0 : limit - weight)}</span>`;
     } else {
-      el.innerHTML = `<span class="err">✕ X(Twitter) 超過</span> <span class="sub">重み ${weight} / ${limit}（${weight - limit} 多い）</span>`;
+      el.innerHTML = `<span class="err">✕ ${L.over}</span> <span class="sub">${L.weightLabel} ${weight} / ${limit}${L.excess(weight - limit)}</span>`;
     }
   }
 
@@ -63,8 +76,8 @@
   $("half").addEventListener("click", toHalf);
   $("clear").addEventListener("click", () => { $("src").value = ""; render(); });
   $("copy").addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText($("src").value); $("copy").textContent = "✓ コピー完了";
-      setTimeout(() => ($("copy").textContent = "コピー"), 1200); } catch {}
+    try { await navigator.clipboard.writeText($("src").value); $("copy").textContent = L.copied;
+      setTimeout(() => ($("copy").textContent = L.copy), 1200); } catch {}
   });
   render();
 })();

@@ -1,11 +1,11 @@
 <h1>日付計算</h1>
-<p class="lead">「○日後はいつ」「2つの日付の間は何日」を確実に。タイムゾーンと夏時間の影響を排するため、内部は <b>UTC で統一</b>しています。</p>
+<p class="lead">「○日後はいつ」「2つの日付の間は何日」を確実に。入力はカレンダーピッカー（<code class="mono">input type="date"</code>）、内部はタイムゾーンと夏時間の影響を排するため <b>UTC で統一</b>しています。</p>
 
 <section class="panel">
   <div class="row" style="margin-bottom:12px">
-    <div style="flex:1;min-width:150px">
+    <div style="flex:1;min-width:170px">
       <div class="lb">基準日</div>
-      <input type="text" id="base" placeholder="YYYY-MM-DD">
+      <input type="date" id="base">
     </div>
     <div style="flex:1;min-width:120px">
       <div class="lb">加算日数（マイナスで過去）</div>
@@ -18,13 +18,13 @@
 
 <section class="panel">
   <div class="row">
-    <div style="flex:1;min-width:150px">
+    <div style="flex:1;min-width:170px">
       <div class="lb">日付 A</div>
-      <input type="text" id="d1" placeholder="YYYY-MM-DD">
+      <input type="date" id="d1">
     </div>
-    <div style="flex:1;min-width:150px">
+    <div style="flex:1;min-width:170px">
       <div class="lb">日付 B</div>
-      <input type="text" id="d2" placeholder="YYYY-MM-DD">
+      <input type="date" id="d2">
     </div>
   </div>
   <div id="diffOut" style="margin-top:14px"></div>
@@ -33,7 +33,7 @@
 <section class="panel">
   <div class="field" style="margin-bottom:8px">
     <label for="birth">満年齢の計算</label>
-    <input type="text" id="birth" placeholder="YYYY-MM-DD（生年月日）">
+    <input type="date" id="birth">
   </div>
   <p id="ageOut" style="margin:0;font-size:.95rem"></p>
 </section>
@@ -46,4 +46,7 @@
     <li><b>「○ヶ月後」</b> — 1月31日の1ヶ月後は 2月28日（or 29日）。加算規則を決めておかないと実装ごとに違う値になる</li>
     <li><b>祝日</b> — 本ツールの営業日計算は<b>土日しか除外していません</b>。日本は祝日が多いので、実務では祝日表が必須です</li>
   </ul>
+  <p class="sub" style="margin:10px 0 0">
+    カレンダーピッカーを使うため表示形式はOS/ブラウザのロケールに従いますが、<b>値は常に <code class="mono">YYYY-MM-DD</code></b> で渡されるので計算はロケールに左右されません。
+  </p>
 </section>

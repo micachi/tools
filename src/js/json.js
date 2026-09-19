@@ -2,6 +2,27 @@
   "use strict";
   const $ = (id) => document.getElementById(id);
 
+  const L = __loc({
+    ja: {
+      please: "JSON を貼り付けてください",
+      invalid: "✕ 不正な JSON です",
+      at: (line, col) => `　${line} 行目 ${col} 列付近`,
+      valid: "✓ 有効な JSON",
+      counts: (s, kb) => `キー ${s.keys} ／ オブジェクト ${s.objects} ／ 配列 ${s.arrays} ／ 文字列 ${s.strings} ／ 数値 ${s.numbers} ／ 最大深さ ${s.depth} ／ 出力 ${kb} KB`,
+      copied: "✓ コピー完了", copyBtn: "出力をコピー",
+      sample: '{"name":"例","items":[1,2,3],"nested":{"a":true},"note":"\\u65e5\\u672c\\u8a9e"}',
+    },
+    en: {
+      please: "Paste some JSON",
+      invalid: "✕ Invalid JSON",
+      at: (line, col) => `　near line ${line}, column ${col}`,
+      valid: "✓ Valid JSON",
+      counts: (s, kb) => `${s.keys} keys ／ ${s.objects} objects ／ ${s.arrays} arrays ／ ${s.strings} strings ／ ${s.numbers} numbers ／ max depth ${s.depth} ／ ${kb} KB out`,
+      copied: "✓ Copied", copyBtn: "Copy output",
+      sample: '{"name":"example","items":[1,2,3],"nested":{"a":true},"note":"\\u65e5\\u672c\\u8a9e"}',
+    },
+  });
+
   // JSON.parse の "position N" から行・列を割り出す
   function locate(src, err) {
     const m = /position (\d+)/.exec(err.message);
@@ -39,7 +60,7 @@
     const src = $("src").value;
     const out = $("out");
     const st = $("status");
-    if (!src.trim()) { out.value = ""; st.innerHTML = '<span class="sub">JSON を貼り付けてください</span>'; $("copy").disabled = true; return; }
+    if (!src.trim()) { out.value = ""; st.innerHTML = `<span class="sub">${L.please}</span>`; $("copy").disabled = true; return; }
 
     let data;
     try {
@@ -48,8 +69,8 @@
       const loc = locate(src, e);
       out.value = "";
       $("copy").disabled = true;
-      st.innerHTML = `<span class="err">✕ 不正な JSON です</span>` +
-        (loc ? `<span class="sub">　${loc.line} 行目 ${loc.col} 列付近 — ${e.message.replace(/\n.*/s, "")}</span>`
+      st.innerHTML = `<span class="err">${L.invalid}</span>` +
+        (loc ? `<span class="sub">${L.at(loc.line, loc.col)} — ${e.message.replace(/\n.*/s, "")}</span>`
             : `<span class="sub">　${e.message}</span>`);
       return;
     }
@@ -65,8 +86,8 @@
     out.value = text;
     $("copy").disabled = false;
     const s = stats(data);
-    st.innerHTML = `<span class="ok">✓ 有効な JSON</span> ` +
-      `<span class="sub">キー ${s.keys} ／ オブジェクト ${s.objects} ／ 配列 ${s.arrays} ／ 文字列 ${s.strings} ／ 数値 ${s.numbers} ／ 最大深さ ${s.depth} ／ 出力 ${(text.length / 1024).toFixed(1)} KB</span>`;
+    st.innerHTML = `<span class="ok">${L.valid}</span> ` +
+      `<span class="sub">${L.counts(s, (text.length / 1024).toFixed(1))}</span>`;
   }
 
   $("fmt").addEventListener("click", () => run("fmt"));
@@ -77,8 +98,8 @@
   $("clear").addEventListener("click", () => { $("src").value = ""; run("fmt"); });
   $("copy").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("out").value);
-      $("copy").textContent = "✓ コピー完了"; setTimeout(() => ($("copy").textContent = "出力をコピー"), 1200); } catch {}
+      $("copy").textContent = L.copied; setTimeout(() => ($("copy").textContent = L.copyBtn), 1200); } catch {}
   });
-  $("src").value = '{"name":"例","items":[1,2,3],"nested":{"a":true},"note":"\\u65e5\\u672c\\u8a9e"}';
+  $("src").value = L.sample;
   run("fmt");
 })();

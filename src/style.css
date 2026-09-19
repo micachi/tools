@@ -16,7 +16,10 @@ a:hover{text-decoration:underline}
 .nav-brand{font-weight:700;font-size:.92rem;letter-spacing:.04em;color:var(--fg);text-decoration:none;white-space:nowrap}
 .nav-brand:hover{color:var(--acc);text-decoration:none}
 .nav-cur{margin-left:auto;font-size:.85rem;color:var(--acc);font-weight:600;white-space:nowrap}
-@media(max-width:560px){.nav-cur{display:none}}
+.langbtn{margin-left:14px;padding:6px 12px;border:1px solid var(--line);border-radius:999px;
+  font-size:.82rem;color:var(--fg);background:#1c2330;text-decoration:none;white-space:nowrap;transition:.15s}
+.langbtn:hover{background:#242c3a;border-color:var(--acc);color:var(--acc)}
+@media(max-width:560px){.nav-cur{display:none}.langbtn{margin-left:auto}}
 
 .dd{position:relative}
 .dd-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:9px;
@@ -108,17 +111,10 @@ button.primary:hover{background:#6cabff}
 .adwrap{margin:22px 0;padding:14px;background:#11151d;border:1px solid var(--line);border-radius:12px;min-height:90px}
 .adlabel{margin:0 0 8px;font-size:.68rem;color:#6b7482;letter-spacing:.12em;text-transform:uppercase}
 
-/* 旅行予算 */
-.fx{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:0 0 18px;
-    display:flex;flex-wrap:wrap;gap:18px;align-items:baseline}
-.fx b{color:var(--acc);font-size:1.3rem;font-variant-numeric:tabular-nums}
-.total{font-size:1.15rem;margin-top:6px}
-.total b{color:var(--acc);font-variant-numeric:tabular-nums}
-.big{font-size:1.9rem;color:var(--acc);font-variant-numeric:tabular-nums;margin:.4em 0}
+/* 表（color / intunestart / edge-favorites で使用） */
 table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:12px;overflow:hidden;margin:16px 0}
 th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line);font-size:.92rem}
 th{color:var(--mut);font-weight:600;font-size:.83rem}
-.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* インポート */
 .filebtn{display:inline-flex;align-items:center;padding:9px 15px;border-radius:9px;border:1px solid var(--line);

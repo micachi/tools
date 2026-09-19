@@ -5,6 +5,39 @@
   // 双方向バインディングのループ防止: プログラムによる書き込み中は input ハンドラを止める
   let syncing = false;
 
+  const L = __loc({
+    ja: {
+      noPins: "ピンがありません。下のプリセットから追加するか、「ピンを追加」を押してください。",
+      aumidPh: "AUMID 例: Microsoft.WindowsTerminal_8wekyb3d8bbwe!App",
+      up: "上へ", down: "下へ", del: "削除",
+      errCount: (n) => `✕ 検証エラー ${n} 件`, pass: "✓ 検証通過", rtErr: "✕ 往復整合エラー",
+      pinCount: (n) => `ピン ${n} 件`, empty: "✕ JSON が空です",
+      impFail: "✕ 取り込み失敗",
+      keepTree: "※ 既存のピン一覧は保持しています。JSON を直すと再取り込みします。",
+      warn: "注意", importedErr: (n) => `⚠ 取り込んだが検証エラー ${n} 件`,
+      imported: "✓ JSON から取り込みました",
+      presetPick: "— プリセットを選択 —",
+      gDocs: "公式ドキュメント記載（信頼度高）", gKnown: "一般に既知の AUMID（実機で要確認）",
+      copied: "✓ コピー完了", copy: "JSON をコピー",
+      fileFail: "✕ ファイルを読み込めませんでした",
+    },
+    en: {
+      noPins: "No pins yet. Add one from the presets below or press “Add pin”.",
+      aumidPh: "AUMID e.g. Microsoft.WindowsTerminal_8wekyb3d8bbwe!App",
+      up: "Move up", down: "Move down", del: "Delete",
+      errCount: (n) => `✕ ${n} validation error(s)`, pass: "✓ Validation passed", rtErr: "✕ Round-trip mismatch",
+      pinCount: (n) => `${n} pin(s)`, empty: "✕ JSON is empty",
+      impFail: "✕ Import failed",
+      keepTree: "※ Your existing pins are kept. Fix the JSON and it will import again.",
+      warn: "Warning", importedErr: (n) => `⚠ Imported but ${n} validation error(s)`,
+      imported: "✓ Imported from JSON",
+      presetPick: "— Select a preset —",
+      gDocs: "From official docs (high confidence)", gKnown: "Generally known AUMIDs (verify on a real machine)",
+      copied: "✓ Copied", copy: "Copy JSON",
+      fileFail: "✕ Could not read the file",
+    },
+  });
+
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   function addPin(type = "packagedAppId", value = "") {
@@ -30,7 +63,7 @@
     const box = $("rows");
     box.innerHTML = "";
     if (!pins.length) {
-      box.innerHTML = '<p class="sub">ピンがありません。下のプリセットから追加するか、「ピンを追加」を押してください。</p>';
+      box.innerHTML = `<p class="sub">${L.noPins}</p>`;
       return;
     }
     pins.forEach((pin, i) => {
@@ -43,10 +76,10 @@
           ${IJS.KEYS.map((k) => `<option value="${k}"${k === t ? " selected" : ""}>${IJS.PIN_TYPES[k].label}</option>`).join("")}
         </select>
         <input type="text" data-i="${i}" class="pval" value="${esc(valOf(pin))}"
-               placeholder="${t === "desktopAppLink" ? "%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\App.lnk" : "AUMID 例: Microsoft.WindowsTerminal_8wekyb3d8bbwe!App"}">
-        <button class="mini" data-act="up" data-i="${i}" title="上へ">↑</button>
-        <button class="mini" data-act="down" data-i="${i}" title="下へ">↓</button>
-        <button class="mini del" data-act="del" data-i="${i}" title="削除">×</button>`;
+               placeholder="${t === "desktopAppLink" ? "%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\App.lnk" : L.aumidPh}">
+        <button class="mini" data-act="up" data-i="${i}" title="${L.up}">↑</button>
+        <button class="mini" data-act="down" data-i="${i}" title="${L.down}">↓</button>
+        <button class="mini del" data-act="del" data-i="${i}" title="${L.del}">×</button>`;
       box.appendChild(row);
     });
 
@@ -86,12 +119,12 @@
     $("aoWarn").hidden = !applyOnce;
     const errs = IJS.validate(pins, applyOnce);
     if (errs.length) {
-      setStatus(false, `<b>✕ 検証エラー ${errs.length} 件</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
+      setStatus(false, `<b>${L.errCount(errs.length)}</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
       return;
     }
     const obj = IJS.buildLayout(pins, applyOnce);
     const ok = IJS.roundTripOk(obj);
-    setStatus(ok, `<b>${ok ? "✓ 検証通過" : "✕ 往復整合エラー"}</b>　<span class="sub">ピン ${obj.pinnedList.length} 件 ／ applyOnce=${obj.applyOnce}</span>`);
+    setStatus(ok, `<b>${ok ? L.pass : L.rtErr}</b>　<span class="sub">${L.pinCount(obj.pinnedList.length)} ／ applyOnce=${obj.applyOnce}</span>`);
     if (ok) {
       syncing = true;
       $("out").value = IJS.toJson(obj);
@@ -103,12 +136,12 @@
   function importFromOut() {
     if (syncing) return;
     const txt = $("out").value;
-    if (!txt.trim()) { setStatus(false, "<b>✕ JSON が空です</b>"); return; }
+    if (!txt.trim()) { setStatus(false, `<b>${L.empty}</b>`); return; }
     let r;
     try {
       r = IJS.fromJson(txt);
     } catch (e) {
-      setStatus(false, `<b>✕ 取り込み失敗</b><ul><li>${esc(e.message || e)}</li></ul><span class="sub">※ 既存のピン一覧は保持しています。JSON を直すと再取り込みします。</span>`);
+      setStatus(false, `<b>${L.impFail}</b><ul><li>${esc(e.message || e)}</li></ul><span class="sub">${L.keepTree}</span>`);
       return;
     }
     pins = r.pins;
@@ -120,11 +153,11 @@
 
     const errs = IJS.validate(pins, r.applyOnce);
     const warn = r.warnings.length
-      ? `<br><span class="sub">注意: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
+      ? `<br><span class="sub">${L.warn}: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
     if (errs.length) {
-      setStatus(false, `<b>⚠ 取り込んだが検証エラー ${errs.length} 件</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
+      setStatus(false, `<b>${L.importedErr(errs.length)}</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
     } else {
-      setStatus(true, `<b>✓ JSON から取り込みました</b>　<span class="sub">ピン ${pins.length} 件 ／ applyOnce=${r.applyOnce}</span>${warn}`);
+      setStatus(true, `<b>${L.imported}</b>　<span class="sub">${L.pinCount(pins.length)} ／ applyOnce=${r.applyOnce}</span>${warn}`);
     }
   }
 
@@ -133,15 +166,15 @@
   // プリセット
   function buildPresets() {
     const sel = $("preset");
-    sel.innerHTML = '<option value="">— プリセットを選択 —</option>';
-    const groups = { docs: "公式ドキュメント記載（信頼度高）", known: "一般に既知の AUMID（実機で要確認）" };
+    sel.innerHTML = `<option value="">${L.presetPick}</option>`;
+    const groups = { docs: L.gDocs, known: L.gKnown };
     for (const [g, label] of Object.entries(groups)) {
       const og = document.createElement("optgroup");
       og.label = label;
       IJS.PRESETS.filter((p) => p.src === g).forEach((p, idx) => {
         const o = document.createElement("option");
         o.value = `${g}|${idx}`;
-        o.textContent = p.name;
+        o.textContent = p.label;
         og.appendChild(o);
       });
       sel.appendChild(og);
@@ -160,7 +193,7 @@
   $("applyOnce").addEventListener("change", () => { if (!syncing) renderOut(); });
   $("cp").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("out").value);
-      $("cp").textContent = "✓ コピー完了"; setTimeout(() => ($("cp").textContent = "JSON をコピー"), 1200); } catch {}
+      $("cp").textContent = L.copied; setTimeout(() => ($("cp").textContent = L.copy), 1200); } catch {}
   });
   $("dl").addEventListener("click", () => {
     const blob = new Blob([$("out").value], { type: "application/json;charset=utf-8" });
@@ -183,7 +216,7 @@
       $("impName").textContent = f.name;
       importFromOut();
     };
-    rd.onerror = () => setStatus(false, "<b>✕ ファイルを読み込めませんでした</b>");
+    rd.onerror = () => setStatus(false, `<b>${L.fileFail}</b>`);
     rd.readAsText(f, "utf-8");
   });
 

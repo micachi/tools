@@ -1,0 +1,49 @@
+<h1>QR Code Generator</h1>
+<p class="lead">Generation happens entirely inside your browser, so <b>your input is never sent to a server</b>. URLs, personal data or internal documents can be encoded without any of it leaving your machine.<br>
+<span class="sub">※ The page itself loads ads (Google AdSense), so cookies and similar data are transmitted when you view it.</span></p>
+
+<section class="panel">
+  <div class="field">
+    <label for="src">Text / URL</label>
+    <textarea id="src" placeholder="https://example.com&#10;Unicode and emoji work too">https://tools.wicachi.com/</textarea>
+  </div>
+  <div class="row" style="margin-bottom:16px">
+    <div style="flex:1;min-width:150px">
+      <div class="lb">Error-correction level (higher = more damage-tolerant, less capacity)</div>
+      <select id="ecl">
+        <option value="L">L — ~7% recovery (maximum capacity)</option>
+        <option value="M" selected>M — ~15% recovery (recommended)</option>
+        <option value="Q">Q — ~25% recovery</option>
+        <option value="H">H — ~30% recovery (for overlaying a logo)</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <div style="flex:1;min-width:150px">
+      <div class="lb">Cell size <b id="cellVal">6</b></div>
+      <input type="range" id="cell" min="2" max="16" value="6">
+    </div>
+    <div style="flex:1;min-width:150px">
+      <div class="lb">Quiet zone <b id="marginVal">4</b></div>
+      <input type="range" id="margin" min="0" max="10" value="4">
+    </div>
+  </div>
+  <div class="row" style="margin-top:14px">
+    <button id="dl" class="primary" disabled>Download PNG</button>
+    <span class="sub">※ For print and posting. A white background is mandatory — scanners cannot read transparent backgrounds.</span>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="qrbox" id="qrbox"></div>
+  <p class="sub" id="info" style="text-align:center;margin:12px 0 0"></p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">Choosing an error-correction level</h2>
+  <p style="font-size:.86rem;color:var(--mut);margin:0">
+    QR codes are designed to survive damage; higher levels tolerate more damage but store less data.
+    As a rule of thumb: <b>L</b> for on-screen display, <b>M</b> for printing, <b>Q/H</b> for outdoor use or paper that bends.
+    If you overlay a logo in the centre, use <b>Q</b> at minimum.
+  </p>
+</section>

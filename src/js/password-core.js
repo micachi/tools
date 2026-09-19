@@ -2,6 +2,28 @@
 const PG = (() => {
   "use strict";
 
+  // ブラウダ / Node 両対応のため言語判定は自己完結
+  const LANG = (typeof document !== "undefined" && document.documentElement.getAttribute("lang")) || "ja";
+  const T = (LANG === "en" ? {
+    noCrypto: "A cryptographic RNG (crypto.getRandomValues) is unavailable in this environment. Open it in a secure browser.",
+    noClass: "Select at least one character class",
+    letterFirstNeed: "Choose uppercase and/or lowercase to force a leading letter",
+    notEnough: (c, m) => `Not enough length (${c} character class(es) require at least ${m} characters)`,
+    instant: "instantly", under1s: "under 1 second",
+    sec: (v) => `${v} seconds`, hour: (v) => `${v} hours`, day: (v) => `${v} days`,
+    year: (v) => `${v} years`, myrial: (v) => `${v} × 10⁴ years`, eons: (v) => `${v} trillion years`,
+    impossible: "effectively impossible (longer than the age of the universe)",
+  } : {
+    noCrypto: "この環境では暗号学的乱数 (crypto.getRandomValues) を使用できません。安全なブラウザで開いてください。",
+    noClass: "文字種を1つ以上選んでください",
+    letterFirstNeed: "先頭を英字にするには大文字/小文字を選んでください",
+    notEnough: (c, m) => `文字数が足りません（文字種 ${c} に対して最低 ${m} 文字）`,
+    instant: "即座", under1s: "1秒未満",
+    sec: (v) => `${v} 秒`, hour: (v) => `${v} 時間`, day: (v) => `${v} 日`,
+    year: (v) => `${v} 年`, myrial: (v) => `${v} 万年`, eons: (v) => `${v} 兆年`,
+    impossible: "事実上不可能（宇宙の年齢を超える）",
+  });
+
   const SETS = {
     upper:   "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
     lower:   "abcdefghijklmnopqrstuvwxyz",
@@ -18,7 +40,7 @@ const PG = (() => {
       // 弱い乱数へのフォールバックは意図的に置かない。
       // Web Crypto が使えない環境では生成を中止する（サイレントに弱体化させない）。
       if (typeof crypto === "undefined" || !crypto.getRandomValues) {
-        throw new Error("この環境では暗号学的乱数 (crypto.getRandomValues) を使用できません。安全なブラウザで開いてください。");
+        throw new Error(T.noCrypto);
       }
       crypto.getRandomValues(buf);
       i = 0;
@@ -57,16 +79,16 @@ const PG = (() => {
   function generateOne(rand, opt) {
     const { pool, classes } = buildPool(opt);
     const len = opt.length;
-    if (!pool) throw new Error("文字種を1つ以上選んでください");
+    if (!pool) throw new Error(T.noClass);
 
     const firstPool = opt.letterFirst
       ? [...pool].filter((c) => /[A-Za-z]/.test(c)).join("")
       : pool;
-    if (opt.letterFirst && !firstPool) throw new Error("先頭を英字にするには大文字/小文字を選んでください");
+    if (opt.letterFirst && !firstPool) throw new Error(T.letterFirstNeed);
 
     const start = opt.letterFirst ? 1 : 0;
     if (len - start < classes.length) {
-      throw new Error(`文字数が足りません（文字種 ${classes.length} に対して最低 ${classes.length + start} 文字）`);
+      throw new Error(T.notEnough(classes.length, classes.length + start));
     }
 
     // 必須クラスを割り当てる位置を選ぶ（letterFirst なら position 0 を除外）
@@ -132,17 +154,17 @@ const PG = (() => {
 
   function crackTime(bits, guessesPerSec = 1e12) {
     const seconds = Math.pow(2, Math.max(0, bits - 1)) / guessesPerSec; // 平均は総数の半分
-    if (bits < 1) return "即座";
+    if (bits < 1) return T.instant;
     const units = [
       ["年", 31557600], ["万年", 3.15576e11], ["億年", 3.15576e12],
     ];
-    if (seconds < 1) return "1秒未満";
-    if (seconds < 3600) return Math.round(seconds) + " 秒";
-    if (seconds < 86400) return Math.round(seconds / 3600) + " 時間";
-    if (seconds < 31557600) return Math.round(seconds / 86400) + " 日";
-    if (seconds < 3.15576e11) return (seconds / 31557600).toFixed(1) + " 年";
-    if (seconds < 3.15576e15) return (seconds / 3.15576e11).toFixed(1) + " 万年";
-    return "事実上不可能（宇宙の年齢を超える）";
+    if (seconds < 1) return T.under1s;
+    if (seconds < 3600) return T.sec(Math.round(seconds));
+    if (seconds < 86400) return T.hour(Math.round(seconds / 3600));
+    if (seconds < 31557600) return T.day(Math.round(seconds / 86400));
+    if (seconds < 3.15576e11) return T.year((seconds / 31557600).toFixed(1));
+    if (seconds < 3.15576e15) return T.myrial((seconds / 3.15576e11).toFixed(1));
+    return T.impossible;
   }
 
   function generateBatch(opt) {

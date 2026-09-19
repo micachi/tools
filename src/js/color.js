@@ -51,8 +51,27 @@
     const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x);
     return (l1 + 0.05) / (l2 + 0.05);
   };
+  const L = __loc({
+    ja: {
+      pass: "合格", fail: "不合格",
+      aaNorm: "AA 通常テキスト", aaLarge: "AA 拡大テキスト", aaa: "AAA",
+      hintGood: "読みやすさは十分です。本文テキストに利用可能。",
+      hintLarge: "拡大テキスト（18px以上/太字14px以上）のみ利用可。本文には不向き。",
+      hintBad: "コントラスト不足。どちらかの色を変える必要があります。",
+      ratioWord: "コントラスト比", copiedShort: "コピー完了", copyBtn: "設定をコピー",
+    },
+    en: {
+      pass: "pass", fail: "fail",
+      aaNorm: "AA normal text", aaLarge: "AA large text", aaa: "AAA",
+      hintGood: "Readable enough for body text.",
+      hintLarge: "Large text only (≥18px, or ≥14px bold). Not suitable for body copy.",
+      hintBad: "Insufficient contrast — one of the colors must change.",
+      ratioWord: "contrast ratio", copiedShort: "Copied", copyBtn: "Copy settings",
+    },
+  });
+
   const badge = (pass, label) =>
-    `<span class="badge ${pass ? "pass" : "fail"}">${label} ${pass ? "合格" : "不合格"}</span>`;
+    `<span class="badge ${pass ? "pass" : "fail"}">${label} ${pass ? L.pass : L.fail}</span>`;
 
   let fg = { r: 230, g: 233, b: 238 }, bg = { r: 13, g: 16, b: 23 };
 
@@ -63,14 +82,10 @@
     const c = contrast(fg, bg);
     $("ratio").textContent = c.toFixed(2) + " : 1";
     $("badges").innerHTML =
-      badge(c >= 4.5, "AA 通常テキスト") +
-      badge(c >= 3.0, "AA 拡大テキスト") +
-      badge(c >= 7.0, "AAA");
-    $("hint").textContent = c >= 4.5
-      ? "読みやすさは十分です。本文テキストに利用可能。"
-      : c >= 3.0
-        ? "拡大テキスト（18px以上/太字14px以上）のみ利用可。本文には不向き。"
-        : "コントラスト不足。どちらかの色を変える必要があります。";
+      badge(c >= 4.5, L.aaNorm) +
+      badge(c >= 3.0, L.aaLarge) +
+      badge(c >= 7.0, L.aaa);
+    $("hint").textContent = c >= 4.5 ? L.hintGood : c >= 3.0 ? L.hintLarge : L.hintBad;
   }
 
   function showFg() {
@@ -99,8 +114,8 @@
   });
   $("copy").addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(`${toHex(fg)} on ${toHex(bg)}  コントラスト比 ${contrast(fg, bg).toFixed(2)}`);
-      $("copy").textContent = "✓ コピー完了"; setTimeout(() => ($("copy").textContent = "設定をコピー"), 1200);
+      await navigator.clipboard.writeText(`${toHex(fg)} on ${toHex(bg)}  ${L.ratioWord} ${contrast(fg, bg).toFixed(2)}`);
+      $("copy").textContent = "✓ " + L.copiedShort; setTimeout(() => ($("copy").textContent = L.copyBtn), 1200);
     } catch {}
   });
   sync();

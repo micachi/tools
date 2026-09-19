@@ -1,0 +1,43 @@
+<h1>Unit Converter</h1>
+<p class="lead">Pick a category, enter a value, and it <b>converts to every unit in that category at once</b> — including traditional Japanese units (mon, tsubo, shō, ken).</p>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:16px">
+    <div style="flex:1;min-width:140px">
+      <div class="lb">Category</div>
+      <select id="cat">
+        <option value="length" selected>Length</option>
+        <option value="mass">Mass</option>
+        <option value="area">Area</option>
+        <option value="volume">Volume</option>
+        <option value="temp">Temperature</option>
+        <option value="data">Data size</option>
+        <option value="speed">Speed</option>
+        <option value="time">Time</option>
+      </select>
+    </div>
+    <div style="flex:1;min-width:140px">
+      <div class="lb">Convert from</div>
+      <select id="from"></select>
+    </div>
+  </div>
+  <div class="field">
+    <label for="val">Value</label>
+    <input type="text" id="val" value="1" inputmode="decimal" placeholder="Number to convert">
+  </div>
+  <button id="swap">Feed the first result back into the input</button>
+</section>
+
+<section class="panel">
+  <div class="stats" id="grid"></div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">Conversions that trip people up</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>KB vs KiB</b> — KB is base-1000, KiB is base-1024. <b>The gap between your OS and the drive label comes from this</b> (a 1&nbsp;TB drive showing ~931&nbsp;GiB)</li>
+    <li><b>Temperature</b> — not expressible as a pure multiplier (it has an offset), so it cannot share a coefficient model with other units</li>
+    <li><b>US vs imperial gallon</b> — this tool uses the US gallon (3.785&nbsp;L). The imperial gallon is 4.546&nbsp;L, about 20% larger</li>
+    <li><b>"month" and "year"</b> — constant conversions of 30 / 365 days. Leap years and variable month lengths are not considered</li>
+  </ul>
+</section>

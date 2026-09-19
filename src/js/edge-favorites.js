@@ -7,6 +7,39 @@
   // 双方向バインディングのループ防止: プログラムによる書き込み中は input ハンドラを止める
   let syncing = false;
 
+  const L = __loc({
+    ja: {
+      newFolder: "新しいフォルダ", namePh: "表示名", urlPh: "intranet.example.com または https://...",
+      addBm: "このフォルダ内にブックマーク追加", addFd: "このフォルダ内にサブフォルダ追加",
+      up: "上へ", down: "下へ", del: "削除",
+      none: "まだ項目がありません。上のボタン、または下の JSON を貼り付けてください。",
+      errCount: (n) => `✕ 検証エラー ${n} 件`, pass: "✓ 検証通過", rtErr: "✕ 往復整合エラー",
+      stat: (b, f, d) => `ブックマーク ${b} ／ フォルダ ${f} ／ 最大 ${d} 階層`,
+      empty: "✕ JSON が空です", impFail: "✕ 取り込み失敗",
+      keepTree: "※ 既存のツリーは保持しています。JSON を直すと再取り込みします。",
+      warn: "注意", importedErr: (n) => `⚠ 取り込んだが検証エラー ${n} 件`, imported: "✓ JSON から取り込みました",
+      copied: "✓ コピー完了", copy: "JSON をコピー", fileFail: "✕ ファイルを読み込めませんでした",
+      top0: "会社指定のお気に入り",
+      b1: "社内ポータル", b2: "Webメール", f1: "業務システム", f1a: "勤怠", f1b: "経費精算",
+      f2: "ナレッジ", f2a: "社内 Wiki", f2b: "マニュアル",
+    },
+    en: {
+      newFolder: "New folder", namePh: "Display name", urlPh: "intranet.example.com or https://...",
+      addBm: "Add a bookmark inside this folder", addFd: "Add a subfolder inside this folder",
+      up: "Move up", down: "Move down", del: "Delete",
+      none: "Nothing yet. Use the buttons above, or paste JSON below.",
+      errCount: (n) => `✕ ${n} validation error(s)`, pass: "✓ Validation passed", rtErr: "✕ Round-trip mismatch",
+      stat: (b, f, d) => `${b} bookmarks ／ ${f} folders ／ max ${d} level(s) deep`,
+      empty: "✕ JSON is empty", impFail: "✕ Import failed",
+      keepTree: "※ Your existing tree is kept. Fix the JSON and it will import again.",
+      warn: "Warning", importedErr: (n) => `⚠ Imported but ${n} validation error(s)`, imported: "✓ Imported from JSON",
+      copied: "✓ Copied", copy: "Copy JSON", fileFail: "✕ Could not read the file",
+      top0: "Company favorites",
+      b1: "Company portal", b2: "Web mail", f1: "Business systems", f1a: "Time & attendance", f1b: "Expense claims",
+      f2: "Knowledge", f2a: "Internal wiki", f2b: "Manuals",
+    },
+  });
+
   /* ---- ツリー操作（パス配列で参照） ---- */
   function getAt(root, path) {
     let list = root;
@@ -14,7 +47,7 @@
     return list;
   }
   function addBookmark(path, name = "", url = "") { getAt(tree, path).push(EFS.bookmark(name, url)); render(); }
-  function addFolder(path, name = "新しいフォルダ") { getAt(tree, path).push(EFS.folder(name, [])); render(); }
+  function addFolder(path, name = L.newFolder) { getAt(tree, path).push(EFS.folder(name, [])); render(); }
   function remove(path) {
     getAt(tree, path.slice(0, -1)).splice(path[path.length - 1], 1);
     render();
@@ -38,13 +71,13 @@
     row.className = "treerow";
     row.innerHTML = `
       <span class="ticon">${isFolder ? "📁" : "🔖"}</span>
-      <input type="text" class="tname" placeholder="表示名" value="${esc(node.name)}">
-      ${isFolder ? "" : `<input type="text" class="turl mono" placeholder="intranet.example.com または https://..." value="${esc(node.url)}">`}
-      ${isFolder ? `<button class="mini" data-a="ab" title="このフォルダ内にブックマーク追加">＋🔖</button>
-                   <button class="mini" data-a="af" title="このフォルダ内にサブフォルダ追加">＋📁</button>` : ""}
-      <button class="mini" data-a="up" title="上へ">↑</button>
-      <button class="mini" data-a="down" title="下へ">↓</button>
-      <button class="mini del" data-a="del" title="削除">×</button>`;
+      <input type="text" class="tname" placeholder="${L.namePh}" value="${esc(node.name)}">
+      ${isFolder ? "" : `<input type="text" class="turl mono" placeholder="${L.urlPh}" value="${esc(node.url)}">`}
+      ${isFolder ? `<button class="mini" data-a="ab" title="${L.addBm}">＋🔖</button>
+                   <button class="mini" data-a="af" title="${L.addFd}">＋📁</button>` : ""}
+      <button class="mini" data-a="up" title="${L.up}">↑</button>
+      <button class="mini" data-a="down" title="${L.down}">↓</button>
+      <button class="mini del" data-a="del" title="${L.del}">×</button>`;
     wrap.appendChild(row);
 
     row.querySelector(".tname").addEventListener("input", (e) => { node.name = e.target.value; renderOut(); });
@@ -67,7 +100,7 @@
     const box = $("tree");
     box.innerHTML = "";
     if (!tree.length) {
-      box.innerHTML = '<p class="sub">まだ項目がありません。上のボタン、または下の JSON を貼り付けてください。</p>';
+      box.innerHTML = `<p class="sub">${L.none}</p>`;
       return;
     }
     tree.forEach((n, i) => box.appendChild(renderNode(n, [i])));
@@ -86,13 +119,13 @@
     const top = $("topName").value;
     const errs = EFS.validate(tree, top);
     if (errs.length) {
-      setStatus(false, `<b>✕ 検証エラー ${errs.length} 件</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
+      setStatus(false, `<b>${L.errCount(errs.length)}</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
       return;
     }
     const arr = EFS.build(tree, top);
     const ok = EFS.roundTripOk(arr);
     const st = EFS.stats(tree);
-    setStatus(ok, `<b>${ok ? "✓ 検証通過" : "✕ 往復整合エラー"}</b>　<span class="sub">ブックマーク ${st.bookmarks} ／ フォルダ ${st.folders} ／ 最大 ${st.maxDepth} 階層</span>`);
+    setStatus(ok, `<b>${ok ? L.pass : L.rtErr}</b>　<span class="sub">${L.stat(st.bookmarks, st.folders, st.maxDepth)}</span>`);
     if (ok) {
       syncing = true;
       $("out").value = EFS.toJson(arr);
@@ -104,12 +137,12 @@
   function importFromOut() {
     if (syncing) return;
     const txt = $("out").value;
-    if (!txt.trim()) { setStatus(false, "<b>✕ JSON が空です</b>"); return; }
+    if (!txt.trim()) { setStatus(false, `<b>${L.empty}</b>`); return; }
     let r;
     try {
       r = EFS.fromJson(txt);
     } catch (e) {
-      setStatus(false, `<b>✕ 取り込み失敗</b><ul><li>${esc(e.message || e)}</li></ul><span class="sub">※ 既存のツリーは保持しています。JSON を直すと再取り込みします。</span>`);
+      setStatus(false, `<b>${L.impFail}</b><ul><li>${esc(e.message || e)}</li></ul><span class="sub">${L.keepTree}</span>`);
       return;
     }
     // 取り込み成功 → ツリーとトップフォルダ名を差し替え（JSON 欄のテキストはそのまま維持）
@@ -122,11 +155,11 @@
     const errs = EFS.validate(tree, r.toplevelName);
     const st = EFS.stats(tree);
     const warn = r.warnings.length
-      ? `<br><span class="sub">注意: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
+      ? `<br><span class="sub">${L.warn}: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
     if (errs.length) {
-      setStatus(false, `<b>⚠ 取り込んだが検証エラー ${errs.length} 件</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
+      setStatus(false, `<b>${L.importedErr(errs.length)}</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
     } else {
-      setStatus(true, `<b>✓ JSON から取り込みました</b>　<span class="sub">ブックマーク ${st.bookmarks} ／ フォルダ ${st.folders} ／ 最大 ${st.maxDepth} 階層</span>${warn}`);
+      setStatus(true, `<b>${L.imported}</b>　<span class="sub">${L.stat(st.bookmarks, st.folders, st.maxDepth)}</span>${warn}`);
     }
   }
 
@@ -144,7 +177,7 @@
 
   $("cp").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("out").value);
-      $("cp").textContent = "✓ コピー完了"; setTimeout(() => ($("cp").textContent = "JSON をコピー"), 1200); } catch {}
+      $("cp").textContent = L.copied; setTimeout(() => ($("cp").textContent = L.copy), 1200); } catch {}
   });
   $("dl").addEventListener("click", () => {
     const blob = new Blob([$("out").value], { type: "application/json;charset=utf-8" });
@@ -163,22 +196,22 @@
       $("impName").textContent = f.name;
       importFromOut();
     };
-    rd.onerror = () => setStatus(false, "<b>✕ ファイルを読み込めませんでした</b>");
+    rd.onerror = () => setStatus(false, `<b>${L.fileFail}</b>`);
     rd.readAsText(f, "utf-8");
   });
 
   /* ---- 初期値（公式例をベースに実用形へ） ---- */
-  $("topName").value = "会社指定のお気に入り";
+  $("topName").value = L.top0;
   tree = [
-    EFS.bookmark("社内ポータル", "intranet.example.co.jp"),
-    EFS.bookmark("Webメール", "outlook.office.com"),
-    EFS.folder("業務システム", [
-      EFS.bookmark("勤怠", "krouter.example.co.jp"),
-      EFS.bookmark("経費精算", "expense.example.co.jp"),
+    EFS.bookmark(L.b1, "intranet.example.co.jp"),
+    EFS.bookmark(L.b2, "outlook.office.com"),
+    EFS.folder(L.f1, [
+      EFS.bookmark(L.f1a, "krouter.example.co.jp"),
+      EFS.bookmark(L.f1b, "expense.example.co.jp"),
     ]),
-    EFS.folder("ナレッジ", [
-      EFS.bookmark("社内 Wiki", "wiki.example.co.jp"),
-      EFS.bookmark("マニュアル", "docs.example.co.jp"),
+    EFS.folder(L.f2, [
+      EFS.bookmark(L.f2a, "wiki.example.co.jp"),
+      EFS.bookmark(L.f2b, "docs.example.co.jp"),
     ]),
   ];
   render();
