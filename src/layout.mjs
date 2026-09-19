@@ -90,10 +90,12 @@ export function footer(base = "./") {
     <a href="${base}">🧰 ツール一覧</a>
 ${ALL.map((i) => `    <a href="${base}${i.slug}/">${i.title}</a>`).join("\n")}
   </div>
-  <p>すべてのツールはブラウザ内で完結し、入力内容がサーバーに送信されることはありません。
+  <p>ツールへ入力した内容はサーバーに送信されず、すべてブラウザ内で処理されます。
   ページを保存すればオフラインでも動作します。</p>
   <p class="sub">QR Code は DENSO WAVE INCORPORATED の登録商標です。QRコード生成に MIT ライセンスの qrcode-generator を使用しています。</p>
-  <p class="sub">このサイトは Google AdSense を利用しています。広告の表示には Cookie 等の送信を伴います。</p>
+  <p class="sub"><b>本サイトは Google AdSense を利用しています。</b>ページ閲覧・広告表示の際に
+  ページURL・リファラ・User-Agent・Cookie 等が Google へ送信され、サイト横断の広告配信に使われる可能性があります。
+  非追跡を望む場合はブラウザの追跡防止機能をご利用ください。</p>
 </footer>`;
 }
 

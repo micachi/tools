@@ -311,5 +311,30 @@ console.log("\n=== 12. 統合後のリンク整合（旧外部依存が残って
   ok("github.io への旧リンク残存なし", stale === 0, bad.join(" ") || "0 件");
 }
 
+console.log("\n=== 13. 矛盾文言ガード（AdSense 有効下で「広告なし」を謳わない） ===");
+{
+  const FORBIDDEN = ["広告なし", "広告を含まない", "広告非表示", "広告ゼロ"];
+  const hits = [];
+  for (const p of pages) {
+    const h = fs.readFileSync(path.join(DIST, p), "utf8");
+    for (const w of FORBIDDEN) if (h.includes(w)) hits.push(`${p}: 「${w}」`);
+  }
+  ok("「広告なし」系の記述なし", hits.length === 0, hits.join(" / ") || "0 件");
+
+  // 広告を開示しているか（全ページ）
+  const noDisclose = [];
+  for (const p of pages) {
+    const h = fs.readFileSync(path.join(DIST, p), "utf8");
+    if (!h.includes("AdSense")) noDisclose.push(p);
+  }
+  ok("全ページで AdSense を開示", noDisclose.length === 0, noDisclose.join(", ") || "全ページ OK");
+
+  // 「入力は送信されない」系の表現は残しつつ、ページ通信と区別できているか
+  const pw = fs.readFileSync(path.join(DIST, "password/index.html"), "utf8");
+  ok("pwgen: 入力と広告の通信を区別して説明", pw.includes("生成処理") && pw.includes("AdSense"));
+  const qr = fs.readFileSync(path.join(DIST, "qr/index.html"), "utf8");
+  ok("qr: 「安全」を無条件に謳わない", !/安全に生成できます。\s*<\/p>/.test(qr) || qr.includes("AdSense"));
+}
+
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);
 process.exit(fail ? 1 : 0);
