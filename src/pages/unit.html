@@ -1,0 +1,43 @@
+<h1>単位変換</h1>
+<p class="lead">カテゴリを選んで値を入れると、<b>そのカテゴリの全単位へ同時に変換</b>します。日本古来の単位（匁・坪・升・間）も網羅しています。</p>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:16px">
+    <div style="flex:1;min-width:140px">
+      <div class="lb">カテゴリ</div>
+      <select id="cat">
+        <option value="length" selected>長さ</option>
+        <option value="mass">重さ</option>
+        <option value="area">面積</option>
+        <option value="volume">容量</option>
+        <option value="temp">温度</option>
+        <option value="data">データ容量</option>
+        <option value="speed">速さ</option>
+        <option value="time">時間</option>
+      </select>
+    </div>
+    <div style="flex:1;min-width:140px">
+      <div class="lb">変換元</div>
+      <select id="from"></select>
+    </div>
+  </div>
+  <div class="field">
+    <label for="val">数値</label>
+    <input type="text" id="val" value="1" inputmode="decimal" placeholder="変換したい数値">
+  </div>
+  <button id="swap">先頭の結果を入力に反映</button>
+</section>
+
+<section class="panel">
+  <div class="stats" id="grid"></div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">注意すべき換算</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>KB と KiB</b> — KB = 1000 進、KiB = 1024 進。<b>OS と HDD/SSD の表記差はこのせいです</b>（1TB HDD が 931GiB しか見えない等）</li>
+    <li><b>温度</b> — 乗算では表せない（オフセットがある）ため、他の単位と混ぜて係数計算することはできません</li>
+    <li><b>米ガロンと英ガロン</b> — 本ツールは US ガロン（3.785 L）です。英ガロンは 4.546 L で約2割違います</li>
+    <li><b>「月」「年」</b> — 30日 / 365日 の定数換算です。閏や月長の変動は考慮していません</li>
+  </ul>
+</section>

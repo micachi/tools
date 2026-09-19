@@ -1,0 +1,45 @@
+<h1>JSON 整形・バリデーション</h1>
+<p class="lead">貼り付けると即座に判定。エラーは<b>行と列</b>を指し示します。すべてブラウザ内で処理されるため、APIレスポンスや設定ファイルを外部に漏らさず確認できます。</p>
+
+<section class="panel">
+  <div class="field">
+    <label for="src">入力 JSON</label>
+    <textarea id="src" style="min-height:150px" placeholder='{ "key": "value" }'></textarea>
+  </div>
+  <div class="row" style="margin-bottom:14px">
+    <div style="min-width:150px">
+      <div class="lb">インデント</div>
+      <select id="indent">
+        <option value="2" selected>半角スペース 2</option>
+        <option value="4">半角スペース 4</option>
+        <option value="tab">タブ</option>
+      </select>
+    </div>
+  </div>
+  <div class="row">
+    <button id="fmt" class="primary">整形</button>
+    <button id="min">圧縮</button>
+    <button id="unesc">\uエスケープ解除</button>
+    <button id="clear">クリア</button>
+  </div>
+  <p id="status" style="margin:12px 0 0;font-size:.9rem"></p>
+</section>
+
+<section class="panel">
+  <div class="field" style="margin-bottom:8px">
+    <label for="out">出力</label>
+    <textarea id="out" readonly style="min-height:220px" class="mono"></textarea>
+  </div>
+  <button id="copy" disabled>出力をコピー</button>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">よくあるエラー</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>末尾カンマ</b> — <code class="mono">[1, 2, ]</code> は JSON では不可（JS の配列リテラルと違う）</li>
+    <li><b>シングルクォート</b> — キーと文字列は必ず<b>ダブルクォート</b></li>
+    <li><b>コメント</b> — <code class="mono">//</code> や <code class="mono">/* */</code> は非対応</li>
+    <li><b>NaN / Infinity</b> — 数値として表現できない（<code class="mono">null</code> を使う）</li>
+  </ul>
+  <p class="sub" style="margin:10px 0 0">「<code class="mono">\u65e5\u672c\u8a9e</code>」のようにエスケープされた日本語は「\uエスケープ解除」で可読化できます。</p>
+</section>
