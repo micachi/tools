@@ -11,21 +11,6 @@ Intune の<b>設定カタログ「お気に入りの構成」</b>にそのまま
 </section>
 
 <section class="panel">
-  <h2 style="font-size:1rem;margin:0 0 8px">📥 既存 JSON をインポート</h2>
-  <p class="sub" style="margin:0 0 10px">既に運用中の <code class="mono">ManagedFavorites</code> JSON を貼り付けるか、ファイルを読み込むと、上のツリー編集で変更できる状態に戻します。</p>
-  <div class="field">
-    <label for="imp">JSON 内容</label>
-    <textarea id="imp" class="mono" style="min-height:130px" placeholder='[{"toplevel_name":"既存フォルダ"},{"name":"Microsoft","url":"microsoft.com"}]'></textarea>
-  </div>
-  <div class="row">
-    <button id="impBtn" class="primary">読み込んでツリーに反映</button>
-    <label class="filebtn"><input type="file" id="impFile" accept=".json,application/json" hidden>ファイルを選択</label>
-    <span class="sub" id="impName"></span>
-  </div>
-  <div id="impMsg" class="valid" style="margin-top:10px"></div>
-</section>
-
-<section class="panel">
   <div class="row" style="margin-bottom:14px">
     <button id="ab" class="primary">＋ ブックマーク</button>
     <button id="af">＋ フォルダ</button>
@@ -38,12 +23,14 @@ Intune の<b>設定カタログ「お気に入りの構成」</b>にそのまま
 <section class="panel">
   <div id="validation" class="valid"></div>
   <div class="field" style="margin-top:12px">
-    <label for="out">生成 JSON（ManagedFavorites）</label>
-    <textarea id="out" readonly class="mono" style="min-height:280px"></textarea>
+    <label for="out">JSON　<span class="sub">— 編集可。ここに貼り付ければ上のツリーへ反映されます</span></label>
+    <textarea id="out" class="mono" style="min-height:280px" spellcheck="false"></textarea>
   </div>
   <div class="row">
     <button id="cp" class="primary">JSON をコピー</button>
     <button id="dl">ManagedFavorites.json 保存</button>
+    <label class="filebtn"><input type="file" id="impFile" accept=".json,application/json" hidden>ファイルを読み込む</label>
+    <span class="sub" id="impName"></span>
   </div>
 </section>
 

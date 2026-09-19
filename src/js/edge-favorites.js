@@ -4,6 +4,8 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   let tree = [];
+  // 双方向バインディングのループ防止: プログラムによる書き込み中は input ハンドラを止める
+  let syncing = false;
 
   /* ---- ツリー操作（パス配列で参照） ---- */
   function getAt(root, path) {
@@ -11,23 +13,15 @@
     for (const i of path) list = list[i].children;
     return list;
   }
-  function addBookmark(path, name = "", url = "") {
-    getAt(tree, path).push(EFS.bookmark(name, url));
-    render();
-  }
-  function addFolder(path, name = "新しいフォルダ") {
-    getAt(tree, path).push(EFS.folder(name, []));
-    render();
-  }
+  function addBookmark(path, name = "", url = "") { getAt(tree, path).push(EFS.bookmark(name, url)); render(); }
+  function addFolder(path, name = "新しいフォルダ") { getAt(tree, path).push(EFS.folder(name, [])); render(); }
   function remove(path) {
-    const parent = getAt(tree, path.slice(0, -1));
-    parent.splice(path[path.length - 1], 1);
+    getAt(tree, path.slice(0, -1)).splice(path[path.length - 1], 1);
     render();
   }
   function move(path, dir) {
     const parent = getAt(tree, path.slice(0, -1));
-    const i = path[path.length - 1];
-    const j = i + dir;
+    const i = path[path.length - 1], j = i + dir;
     if (j < 0 || j >= parent.length) return;
     [parent[i], parent[j]] = [parent[j], parent[i]];
     render();
@@ -56,7 +50,6 @@
     row.querySelector(".tname").addEventListener("input", (e) => { node.name = e.target.value; renderOut(); });
     const u = row.querySelector(".turl");
     if (u) u.addEventListener("input", (e) => { node.url = e.target.value; renderOut(); });
-
     row.querySelectorAll("button[data-a]").forEach((b) => b.addEventListener("click", () => {
       const a = b.dataset.a;
       if (a === "ab") addBookmark(path);
@@ -74,29 +67,67 @@
     const box = $("tree");
     box.innerHTML = "";
     if (!tree.length) {
-      box.innerHTML = '<p class="sub">まだ項目がありません。上のボタンから追加してください。</p>';
+      box.innerHTML = '<p class="sub">まだ項目がありません。上のボタン、または下の JSON を貼り付けてください。</p>';
       return;
     }
     tree.forEach((n, i) => box.appendChild(renderNode(n, [i])));
   }
 
+  function setStatus(ok, html) {
+    const v = $("validation");
+    v.className = "valid " + (ok ? "ok" : "err");
+    v.innerHTML = html;
+    $("cp").disabled = !ok;
+    $("dl").disabled = !ok;
+  }
+
+  /** ツリー → JSON（出力欄へ書き込む） */
   function renderOut() {
     const top = $("topName").value;
     const errs = EFS.validate(tree, top);
-    const v = $("validation");
     if (errs.length) {
-      v.className = "valid err";
-      v.innerHTML = `<b>✕ 検証エラー ${errs.length} 件</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`;
-      $("cp").disabled = true; $("dl").disabled = true;
+      setStatus(false, `<b>✕ 検証エラー ${errs.length} 件</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
       return;
     }
     const arr = EFS.build(tree, top);
     const ok = EFS.roundTripOk(arr);
     const st = EFS.stats(tree);
-    v.className = "valid ok";
-    v.innerHTML = `<b>✓ 検証通過</b>　<span class="sub">ブックマーク ${st.bookmarks} ／ フォルダ ${st.folders} ／ 最大 ${st.maxDepth} 階層 ／ 往復整合 ${ok ? "OK" : "NG"}</span>`;
-    $("cp").disabled = !ok; $("dl").disabled = !ok;
-    $("out").value = EFS.toJson(arr);
+    setStatus(ok, `<b>${ok ? "✓ 検証通過" : "✕ 往復整合エラー"}</b>　<span class="sub">ブックマーク ${st.bookmarks} ／ フォルダ ${st.folders} ／ 最大 ${st.maxDepth} 階層</span>`);
+    if (ok) {
+      syncing = true;
+      $("out").value = EFS.toJson(arr);
+      syncing = false;
+    }
+  }
+
+  /** JSON 欄 → ツリー（ユーザーが JSON を編集/貼り付けした時） */
+  function importFromOut() {
+    if (syncing) return;
+    const txt = $("out").value;
+    if (!txt.trim()) { setStatus(false, "<b>✕ JSON が空です</b>"); return; }
+    let r;
+    try {
+      r = EFS.fromJson(txt);
+    } catch (e) {
+      setStatus(false, `<b>✕ 取り込み失敗</b><ul><li>${esc(e.message || e)}</li></ul><span class="sub">※ 既存のツリーは保持しています。JSON を直すと再取り込みします。</span>`);
+      return;
+    }
+    // 取り込み成功 → ツリーとトップフォルダ名を差し替え（JSON 欄のテキストはそのまま維持）
+    tree = r.tree;
+    syncing = true;
+    $("topName").value = r.toplevelName || "";
+    syncing = false;
+    renderTree();
+
+    const errs = EFS.validate(tree, r.toplevelName);
+    const st = EFS.stats(tree);
+    const warn = r.warnings.length
+      ? `<br><span class="sub">注意: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
+    if (errs.length) {
+      setStatus(false, `<b>⚠ 取り込んだが検証エラー ${errs.length} 件</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
+    } else {
+      setStatus(true, `<b>✓ JSON から取り込みました</b>　<span class="sub">ブックマーク ${st.bookmarks} ／ フォルダ ${st.folders} ／ 最大 ${st.maxDepth} 階層</span>${warn}`);
+    }
   }
 
   function render() { renderTree(); renderOut(); }
@@ -105,7 +136,12 @@
   $("ab").addEventListener("click", () => addBookmark([]));
   $("af").addEventListener("click", () => addFolder([]));
   $("clear").addEventListener("click", () => { tree = []; render(); });
-  $("topName").addEventListener("input", renderOut);
+  $("topName").addEventListener("input", () => { if (!syncing) renderOut(); });
+
+  // JSON 欄は編集可。入力停止後にツリーへ反映
+  let t = null;
+  $("out").addEventListener("input", () => { clearTimeout(t); t = setTimeout(importFromOut, 400); });
+
   $("cp").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("out").value);
       $("cp").textContent = "✓ コピー完了"; setTimeout(() => ($("cp").textContent = "JSON をコピー"), 1200); } catch {}
@@ -118,33 +154,16 @@
     a.click();
     URL.revokeObjectURL(a.href);
   });
-
-  /* ---- インポート ---- */
-  function doImport(text) {
-    const msg = $("impMsg");
-    if (!text || !text.trim()) { msg.className = "valid err"; msg.textContent = "⚠ JSON を入力してください"; return; }
-    try {
-      const r = EFS.fromJson(text);
-      tree = r.tree;
-      $("topName").value = r.toplevelName || "";
-      render();
-      const st = EFS.stats(tree);
-      const w = r.warnings.length
-        ? `<br><span class="sub">注意: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
-      msg.className = "valid ok";
-      msg.innerHTML = `✓ 読み込み完了 — ブックマーク ${st.bookmarks} ／ フォルダ ${st.folders} ／ 最大 ${st.maxDepth} 階層${w}`;
-    } catch (e) {
-      msg.className = "valid err";
-      msg.innerHTML = "✕ " + esc(e.message || e);
-    }
-  }
-  $("impBtn").addEventListener("click", () => doImport($("imp").value));
   $("impFile").addEventListener("change", (e) => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
     const rd = new FileReader();
-    rd.onload = () => { $("imp").value = rd.result; $("impName").textContent = f.name; doImport(rd.result); };
-    rd.onerror = () => { $("impMsg").className = "valid err"; $("impMsg").textContent = "✕ ファイルを読み込めませんでした"; };
+    rd.onload = () => {
+      syncing = true; $("out").value = rd.result; syncing = false;
+      $("impName").textContent = f.name;
+      importFromOut();
+    };
+    rd.onerror = () => setStatus(false, "<b>✕ ファイルを読み込めませんでした</b>");
     rd.readAsText(f, "utf-8");
   });
 
