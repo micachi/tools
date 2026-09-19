@@ -1,0 +1,71 @@
+<h1>Intune スタートメニュー レイアウト生成</h1>
+<p class="lead">Windows 11 の <code class="mono">LayoutModification.json</code> を、ピン留めを選ぶだけで生成します。
+Microsoft Intune の<b>設定カタログ「[スタート] のレイアウト」</b>にそのまま投入できます。</p>
+
+<section class="panel">
+  <div class="field">
+    <span class="lb">適用ポリシー（applyOnce）</span>
+    <label class="switch"><input type="checkbox" id="applyOnce"> <b>applyOnce = true</b>（1回だけ適用する）</label>
+    <p class="sub" style="margin:8px 0 0">
+      <b>false</b>（既定）= ログインごとに再適用され、<u>ユーザーが並べ替えてもリセットされます</u>。<br>
+      <b>true</b> = 初回のみ適用。以降はユーザーの自由。
+    </p>
+    <div class="warnbox" id="aoWarn" hidden>
+      ⚠ <b>applyOnce は Windows 11 バージョン 24H2 KB5062660 以降でのみサポート</b>されます。
+      それ以前のビルドでは<b>無視される</b>ため、ユーザー変更がリセットされ続けます。展開対象のビルドを確認してください。
+    </div>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:14px">
+    <div style="flex:1;min-width:220px">
+      <div class="lb">よく使うアプリを素早く追加</div>
+      <select id="preset"></select>
+    </div>
+    <div style="align-self:flex-end"><button id="add" class="primary">＋ ピンを追加</button></div>
+    <div style="align-self:flex-end"><button id="clear">全消去</button></div>
+  </div>
+  <div id="rows"></div>
+</section>
+
+<section class="panel">
+  <div id="validation" class="valid"></div>
+  <div class="field" style="margin-top:12px">
+    <label for="out">生成 JSON</label>
+    <textarea id="out" readonly class="mono" style="min-height:260px"></textarea>
+  </div>
+  <div class="row">
+    <button id="cp" class="primary">JSON をコピー</button>
+    <button id="dl">LayoutModification.json 保存</button>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">4種類のピン方式（1エントリにつき1つだけ）</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+    <thead><tr style="color:var(--mut);text-align:left">
+      <th style="padding:8px;border-bottom:1px solid var(--line)">キー</th><th style="padding:8px;border-bottom:1px solid var(--line)">用途</th><th style="padding:8px;border-bottom:1px solid var(--line)">値の形式</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">packagedAppId</td><td style="padding:8px;border-bottom:1px solid var(--line)">UWP / Microsoft Store アプリ</td><td style="padding:8px;border-bottom:1px solid var(--line)">AUMID</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">desktopAppId</td><td style="padding:8px;border-bottom:1px solid var(--line)">AUMID を持つデスクトップアプリ</td><td style="padding:8px;border-bottom:1px solid var(--line)">AUMID</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">desktopAppLink</td><td style="padding:8px;border-bottom:1px solid var(--line)">AUMID が無いデスクトップアプリ</td><td style="padding:8px;border-bottom:1px solid var(--line)">.lnk へのパス</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">secondaryTile</td><td style="padding:8px;border-bottom:1px solid var(--line)">Microsoft Edge のサイトピン</td><td style="padding:8px;border-bottom:1px solid var(--line)">オブジェクト</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">展開前に必ず確認してほしいこと</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>ショートカットの配置場所</b> — <code class="mono">desktopAppLink</code> で指す <code class="mono">.lnk</code> は、<b>対象デバイス全てに同じパスで存在する必要があります</b>。推奨配置先は <code class="mono">%ProgramData%\Microsoft\Windows\Start Menu\Programs</code></li>
+    <li><b>実行ファイルの直接配置は無意味</b> — そのフォルダに exe やスクリプトを置いてもピン留めされません。<b>.lnk が必要です</b></li>
+    <li><b>AUMID は実機で確認を</b> — <code class="mono">Get-StartApps</code>（PowerShell）で一覧取得できます。プリセットの「一般に既知」欄はバージョンにより異なる可能性があります</li>
+    <li><b>完全適用 vs 部分適用</b> — 完全適用するとユーザーはスタートへのピン留め／解除ができなくなります。部分適用（<code class="mono">OnlySpecifiedGroups</code>）は XML 側の構文で、<b>JSON 形式では扱えません</b></li>
+    <li><b>Intune での投入先</b> — 設定カタログ → 「[スタート] のレイアウト」→ 生成した JSON を貼り付け</li>
+  </ul>
+  <p class="sub" style="margin:12px 0 0">
+    参考: <a href="https://learn.microsoft.com/ja-jp/windows/configuration/start/layout" rel="noopener">Microsoft Learn — Windows 11 の [スタート] レイアウトを構成する</a>
+  </p>
+</section>

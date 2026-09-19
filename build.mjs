@@ -19,6 +19,7 @@ const TOOLS = [
   { slug: "json",      title: "JSON 整形・検証",     desc: "JSONの整形・圧縮・バリデーション。エラーは行と列を指し示し、\\uエスケープされた日本語も可読化できます。" },
   { slug: "unit",      title: "単位変換",           desc: "長さ・重さ・面積・容量・温度・データ容量・速さ・時間の8カテゴリを全単位へ同時変換。匁・坪・升など和単位にも対応。" },
   { slug: "datecalc",  title: "日付計算",           desc: "日付の加算・2日付の差・営業日数・満年齢をUTC基準で正確に計算。タイムゾーンと夏時間のズレを排除しています。" },
+  { slug: "intunestart", title: "Intune スタートメニュー レイアウト生成", desc: "Windows 11 の LayoutModification.json を生成。Intune 設定カタログにそのまま投入でき、applyOnce のバージョン制限や AUMID 形式を検証します。", files: ["intunestart-core", "intunestart"] },
 ];
 // 外部（別リポジトリ）への相互リンク
 const EXTERNAL = [
@@ -117,8 +118,12 @@ for (const t of TOOLS) {
   mkdirSync(join(OUT, t.slug), { recursive: true });
   const body = readFileSync(join(SRC, "pages", `${t.slug}.html`), "utf8");
   let js = "";
-  if (t.slug === "qr") js = safe(vendorQr() + "\n" + readFileSync(join(SRC, "js", "qr.js"), "utf8"));
-  else js = safe(readFileSync(join(SRC, "js", `${t.slug}.js`), "utf8"));
+  if (t.slug === "qr") {
+    js = safe(vendorQr() + "\n" + readFileSync(join(SRC, "js", "qr.js"), "utf8"));
+  } else {
+    const files = t.files || [t.slug];
+    js = safe(files.map((f) => readFileSync(join(SRC, "js", `${f}.js`), "utf8")).join("\n"));
+  }
 
   writeFileSync(join(OUT, t.slug, "index.html"), layout({
     slug: t.slug,

@@ -154,5 +154,52 @@ console.log("\n=== 7. 日付ロジック（閏年・不正日付） ===");
   ok("月曜〜日曜の7日間で営業日=5", biz === 5, "biz=" + biz);
 }
 
+console.log("\n=== 8. Intune スタートレイアウト JSON 生成 ===");
+{
+  const IJS = require(path.join(__dirname, "src", "js", "intunestart-core.js"));
+
+  const good = [
+    { packagedAppId: "Microsoft.WindowsTerminal_8wekyb3d8bbwe!App" },
+    { desktopAppLink: "%ALLUSERSPROFILE%\\Microsoft\\Windows\\Start Menu\\Programs\\Microsoft Edge.lnk" },
+    { desktopAppId: "Microsoft.Windows.Explorer" },
+  ];
+  ok("正常系でエラーなし", IJS.validate(good, false).length === 0,
+    JSON.stringify(IJS.validate(good, false)));
+
+  const obj = IJS.buildLayout(good, false);
+  ok("トップレベルは applyOnce と pinnedList のみ",
+    JSON.stringify(Object.keys(obj)) === JSON.stringify(["applyOnce", "pinnedList"]),
+    Object.keys(obj).join(","));
+  ok("各エントリはキー1つのみ", obj.pinnedList.every((e) => Object.keys(e).length === 1));
+  ok("往復整合", IJS.roundTripOk(obj));
+
+  const json = IJS.toJson(obj);
+  ok("JSON内バックスラッシュが正しくエスケープ", json.includes("\\\\Start Menu\\\\"), "\\\\ 出現 OK");
+  ok("JSONとして再パース可能", JSON.parse(json).pinnedList.length === 3);
+
+  // applyOnce の反映
+  ok("applyOnce=true が反映される", IJS.buildLayout(good, true).applyOnce === true);
+  ok("applyOnce=false が反映される", IJS.buildLayout(good, false).applyOnce === false);
+
+  // 異常系
+  ok("空リストを検出", IJS.validate([], false).length > 0);
+  ok("キーなしを検出", IJS.validatePin({}, 0).length > 0);
+  ok("複数キーを検出", IJS.validatePin({ packagedAppId: "a!b", desktopAppId: "c!d" }, 0).length > 0);
+  ok("不正AUMIDを検出", IJS.validatePin({ packagedAppId: "not-an-aumid" }, 0).length > 0);
+  ok("packagedAppId で ! 無しは拒否", IJS.validatePin({ packagedAppId: "Microsoft.WindowsTerminal" }, 0).length > 0);
+  ok("desktopAppId の ! 無しを許容", IJS.validatePin({ desktopAppId: "Microsoft.Windows.Explorer" }, 0).length === 0,
+    JSON.stringify(IJS.validatePin({ desktopAppId: "Microsoft.Windows.Explorer" }, 0)));
+  ok(".lnk 以外を検出", IJS.validatePin({ desktopAppLink: "C:\\Windows\\notepad.exe" }, 0).length > 0);
+  ok("secondaryTile 必須欠落を検出", IJS.validatePin({ secondaryTile: { tileId: "x" } }, 0).length > 0);
+  const st = { secondaryTile: { tileId: "MSEdge._pin_x", arguments: " --pin-url=https://a.example --profile-directory=Default --launch-tile", displayName: "x", packagedAppId: "Microsoft.MicrosoftEdge.Stable_8wekyb3d8bbwe!App" } };
+  ok("secondaryTile 正常系は通る", IJS.validatePin(st, 0).length === 0, JSON.stringify(IJS.validatePin(st, 0)));
+  ok("applyOnce 不正値を検出", IJS.validate(good, "yes").length > 0);
+
+  // プリセットの健全性
+  const badPresets = IJS.PRESETS.filter((p) => IJS.validatePin({ [p.type]: p.value }, 0).length > 0);
+  ok("全プリセットが自身の検証を通過", badPresets.length === 0,
+    badPresets.length ? badPresets.map((p) => p.name).join(",") : IJS.PRESETS.length + " 件すべて OK");
+}
+
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);
 process.exit(fail ? 1 : 0);
