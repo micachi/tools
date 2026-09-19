@@ -14,7 +14,9 @@ const ok = (name, cond, extra = "") => {
 
 console.log("\n=== 1. 成果物の存在 ===");
 const pages = ["index.html", "qr/index.html", "mojicount/index.html", "color/index.html",
-               "json/index.html", "unit/index.html", "datecalc/index.html"];
+               "json/index.html", "unit/index.html", "datecalc/index.html", "intunestart/index.html",
+               "password/index.html", "travel/index.html",
+               "travel/bali/index.html", "travel/honolulu/index.html", "travel/paris/index.html"];
 for (const p of pages) {
   const f = path.join(DIST, p);
   ok(p + " が存在し 5KB 超", fs.existsSync(f) && fs.statSync(f).size > 5000,
@@ -35,7 +37,8 @@ console.log("\n=== 1b. 新ツールの必須要素 ===");
 }
 
 console.log("\n=== 2. 相互リンク構造（全ページが他全ページへ参照） ===");
-const targets = ["pwgen", "travel-budget", "qr/", "mojicount/", "color/", "json/", "unit/", "datecalc/"];
+const targets = ["qr/", "mojicount/", "color/", "json/", "unit/", "datecalc/",
+                "intunestart/", "password/", "travel/"];
 for (const p of pages) {
   const h = fs.readFileSync(path.join(DIST, p), "utf8");
   const missing = targets.filter((t) => !h.includes(t));
@@ -231,7 +234,7 @@ console.log("\n=== 9. DOM ID 整合性（JS が参照する id が HTML に実�
   const fs2 = require("fs");
   const jsDir = path.join(__dirname, "src", "js");
   const pgDir = path.join(__dirname, "src", "pages");
-  const skip = ["intunestart-core.js"]; // DOM 非依存のコアロジック
+  const skip = ["intunestart-core.js", "password-core.js", "password-app.js"]; // DOM 非依存 or 複数ファイル構成
 
   const jsFiles = fs2.readdirSync(jsDir).filter((f) => f.endsWith(".js") && !skip.includes(f));
   ok("対象 JS を検出", jsFiles.length >= 7, jsFiles.length + " 件");
@@ -259,6 +262,53 @@ console.log("\n=== 9. DOM ID 整合性（JS が参照する id が HTML に実�
   // 前回バグの回帰確認
   const qrjs = fs2.readFileSync(path.join(jsDir, "qr.js"), "utf8");
   ok("qr.js に dlhref への死んだ参照が残っていない", !qrjs.includes("dlhref"));
+}
+
+console.log("\n=== 10. AdSense 統合 ===");
+{
+  const CLIENT = "ca-pub-2675858646142277";
+  const SLOT = "5777667714";
+  let loaderOk = 0, unitOk = 0, labelOk = 0;
+  const missing = [];
+  for (const p of pages) {
+    const h = fs.readFileSync(path.join(DIST, p), "utf8");
+    const hasLoader = h.includes("pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + CLIENT);
+    const hasUnit = h.includes('data-ad-slot="' + SLOT + '"') && h.includes('data-ad-client="' + CLIENT + '"');
+    const hasLabel = h.includes('class="adlabel"');
+    if (hasLoader) loaderOk++;
+    if (hasUnit) unitOk++;
+    if (hasLabel) labelOk++;
+    if (!hasLoader || !hasUnit || !hasLabel) missing.push(p);
+  }
+  ok("全ページに AdSense ローダー", loaderOk === pages.length, `${loaderOk}/${pages.length}`);
+  ok("全ページに広告ユニット（正しいスロット）", unitOk === pages.length, `${unitOk}/${pages.length}`);
+  ok("全ページに「広告」明示（ポリシー対応）", labelOk === pages.length, `${labelOk}/${pages.length}`);
+  ok("欠落なし", missing.length === 0, missing.join(", ") || "なし");
+  ok("adsbygoogle push あり", fs.readFileSync(path.join(DIST, "index.html"), "utf8").includes("(adsbygoogle = window.adsbygoogle || []).push({});"));
+}
+
+console.log("\n=== 11. pwgen のコピーは「生成処理」に限定されているか ===");
+{
+  const h = fs.readFileSync(path.join(DIST, "password/index.html"), "utf8");
+  ok("「生成処理はブラウザ内で完結」を含む", h.includes("生成処理はブラウザ内で完結"));
+  ok("無条件の「ブラウザ内で完結」だけになっていない（生成処理と明記）",
+     h.includes("生成処理はブラウザ内で完結") || !h.includes(">🔒 ブラウザ内で完結<"));
+  ok("AdSense を読み込んでいることを開示している",
+     h.includes("AdSense") && (h.includes("開示") || h.includes("Cookie")));
+  ok("CSPRNG 説明は維持されている", h.includes("crypto.getRandomValues"));
+}
+
+console.log("\n=== 12. 統合後のリンク整合（旧外部依存が残っていないか） ===");
+{
+  let stale = 0;
+  const bad = [];
+  for (const p of pages) {
+    const h = fs.readFileSync(path.join(DIST, p), "utf8");
+    // 統合後は github.io へのナビ/フッターリンクは不要
+    const hits = (h.match(/micachi\.github\.io\/(pwgen|travel-budget|tools)/g) || []).length;
+    if (hits > 0) { stale += hits; bad.push(`${p}:${hits}`); }
+  }
+  ok("github.io への旧リンク残存なし", stale === 0, bad.join(" ") || "0 件");
 }
 
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);
