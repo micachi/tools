@@ -488,5 +488,51 @@ console.log("\n=== 16. 多言語化（ja / en） ===");
   }
 }
 
+console.log("\n=== 17. HTML 属性の整合（引用符の欠落検出） ===");
+{
+  const read = (p) => fs.readFileSync(path.join(DIST, p), "utf8");
+  const ALLP = pages.concat(["travel/index.html", "travel/bali/index.html"]);
+
+  // 開始タグ内で引用符が閉じていない行 = 後続コンテンツを飲み込む致命的バグ
+  // ※ <script>/<style> 内は JS/CSS の文字列リテラルで誤検出するため除外する
+  const stripBlocks = (s) => s
+    .replace(/<script[\s\S]*?<\/script>/gi, "<script></script>")
+    .replace(/<style[\s\S]*?<\/style>/gi, "<style></style>");
+
+  let unbalanced = [];
+  for (const p of ALLP) {
+    const lines = stripBlocks(read(p)).split("\n");
+    lines.forEach((l, i) => {
+      const m = /<[a-zA-Z][^>]*$/.exec(l);
+      if (m && (m[0].match(/"/g) || []).length % 2 === 1) {
+        unbalanced.push(`${p}:${i + 1} ${m[0].slice(-60)}`);
+      }
+    });
+  }
+  ok("全ページで開始タグの引用符が閉じている", unbalanced.length === 0,
+    unbalanced.slice(0, 3).join(" | "));
+
+  // 言語切替ボタンは可視テキストが空でないこと（欠落すると無表示ボタンになる）
+  const btnRe = /<a class="langbtn"[^>]*>([^<]*)<\/a>/g;
+  for (const p of pages) {
+    const hits = [...read(p).matchAll(btnRe)];
+    ok(`${p}: 言語切替ボタンが 1 個`, hits.length === 1, `${hits.length} 個`);
+    const txt = hits[0] ? hits[0][1].trim() : "";
+    ok(`${p}: 言語切替ボタンに文字が表示される`, txt.length > 0, `"${txt}"`);
+  }
+  ok("JA のボタンは English / EN のボタンは日本語",
+    read("index.html").includes('>English</a>') && read("en/index.html").includes('>日本語</a>'));
+
+  // 見出し構造
+  for (const p of pages) {
+    const h = read(p);
+    ok(`${p}: <h1> がちょうど 1 個`, (h.match(/<h1[ >]/g) || []).length === 1,
+      `${(h.match(/<h1[ >]/g) || []).length} 個`);
+  }
+  ok("ハブ見出しが言語正しい",
+    read("index.html").includes("<h1>便利ツール集</h1>") &&
+    read("en/index.html").includes("<h1>Web Tools</h1>"));
+}
+
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);
 process.exit(fail ? 1 : 0);

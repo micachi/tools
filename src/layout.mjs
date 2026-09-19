@@ -115,7 +115,7 @@ ${groups}
     </div>
   </div>
   <span class="nav-cur">${cur}</span>
-  <a class="langbtn" href="${alt}" hreflang="${lang === "ja" ? "en" : "ja"}>${u.langSwitch}</a>
+  <a class="langbtn" href="${alt}" hreflang="${lang === "ja" ? "en" : "ja"}">${u.langSwitch}</a>
 </div></nav>
 <script>
 (function(){
