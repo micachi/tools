@@ -234,7 +234,7 @@ console.log("\n=== 9. DOM ID 整合性（JS が参照する id が HTML に実�
   const fs2 = require("fs");
   const jsDir = path.join(__dirname, "src", "js");
   const pgDir = path.join(__dirname, "src", "pages");
-  const skip = ["intunestart-core.js", "password-core.js", "password-app.js"]; // DOM 非依存 or 複数ファイル構成
+  const skip = ["intunestart-core.js", "password-core.js", "password-app.js", "edge-favorites-core.js"]; // DOM 非依存 or 複数ファイル構成
 
   const jsFiles = fs2.readdirSync(jsDir).filter((f) => f.endsWith(".js") && !skip.includes(f));
   ok("対象 JS を検出", jsFiles.length >= 7, jsFiles.length + " 件");
@@ -334,6 +334,62 @@ console.log("\n=== 13. 矛盾文言ガード（AdSense 有効下で「広告な�
   ok("pwgen: 入力と広告の通信を区別して説明", pw.includes("生成処理") && pw.includes("AdSense"));
   const qr = fs.readFileSync(path.join(DIST, "qr/index.html"), "utf8");
   ok("qr: 「安全」を無条件に謳わない", !/安全に生成できます。\s*<\/p>/.test(qr) || qr.includes("AdSense"));
+}
+
+console.log("\n=== 14. Edge ManagedFavorites 生成 ===");
+{
+  const EFS = require(path.join(__dirname, "src", "js", "edge-favorites-core.js"));
+
+  const tree = [
+    EFS.bookmark("社内ポータル", "intranet.example.co.jp"),
+    EFS.folder("業務", [
+      EFS.bookmark("勤怠", "krouter.example.co.jp"),
+      EFS.folder("深層", [EFS.bookmark("深い", "deep.example.co.jp")]),
+    ]),
+  ];
+  const arr = EFS.build(tree, "会社指定");
+
+  ok("1要素目が toplevel_name", arr[0].toplevel_name === "会社指定");
+  ok("既定名に切り替わる", EFS.build(tree, "")[0].toplevel_name === EFS.DEFAULT_TOP);
+  ok("ブックマークは name+url のみ",
+    JSON.stringify(Object.keys(arr[1]).sort()) === JSON.stringify(["name", "url"]));
+  ok("フォルダは name+children のみ（url を持たない）",
+    JSON.stringify(Object.keys(arr[2]).sort()) === JSON.stringify(["children", "name"]));
+  ok("入れ子が再帰的に変換されている",
+    arr[2].children[1].children[0].name === "深い");
+  ok("往復整合", EFS.roundTripOk(arr));
+  ok("JSON 再パース可能", JSON.parse(EFS.toJson(arr)).length === 3);
+
+  const st = EFS.stats(tree);
+  ok("統計が正しい", st.bookmarks === 3 && st.folders === 2 && st.maxDepth === 3,
+    `bm=${st.bookmarks} fd=${st.folders} depth=${st.maxDepth}`);
+
+  // 検証
+  ok("正常系でエラーなし", EFS.validate(tree, "x").length === 0, JSON.stringify(EFS.validate(tree, "x")));
+  ok("空ツリーを検出", EFS.validate([], "x").length > 0);
+  ok("名前なしを検出", EFS.validateNode(EFS.bookmark("", "a.com"), "t", []).length > 0);
+  ok("URL なしを検出", EFS.validateNode(EFS.bookmark("x", ""), "t", []).length > 0);
+  ok("URL の空白を検出", EFS.validateNode(EFS.bookmark("x", "a b.com"), "t", []).length > 0);
+  ok("javascript: URL を拒否", EFS.validateNode(EFS.bookmark("x", "javascript:alert(1)"), "t", []).length > 0);
+  ok("ドットもスキームもない URL を検出", EFS.validateNode(EFS.bookmark("x", "localhost"), "t", []).length > 0);
+  ok("フォルダに url を付けたらエラー", EFS.validateNode({ type: "folder", name: "f", url: "a.com", children: [EFS.bookmark("a", "b.com")] }, "t", []).length > 0);
+  ok("空フォルダを検出", EFS.validateNode(EFS.folder("空"), "t", []).length > 0);
+  ok("about: / file: スキームは許容", EFS.validateNode(EFS.bookmark("x", "about:blank"), "t", []).length === 0);
+
+  // 公式例がそのまま通ること
+  const official = [
+    EFS.bookmark("Microsoft", "microsoft.com"),
+    EFS.bookmark("Bing", "bing.com"),
+    EFS.folder("Microsoft Edge links", [
+      EFS.bookmark("Microsoft Edge Insiders", "www.microsoftedgeinsider.com"),
+      EFS.bookmark("Microsoft Edge", "www.microsoft.com/windows/microsoft-edge"),
+    ]),
+  ];
+  ok("公式ドキュメント例が検証を通過", EFS.validate(official, "My managed favorites folder").length === 0,
+    JSON.stringify(EFS.validate(official, "x")));
+  const oa = EFS.build(official, "My managed favorites folder");
+  ok("公式例の JSON が構造一致",
+    oa[0].toplevel_name === "My managed favorites folder" && oa[3].children.length === 2);
 }
 
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);

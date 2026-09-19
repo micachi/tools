@@ -120,6 +120,20 @@ th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line);font
 th{color:var(--mut);font-weight:600;font-size:.83rem}
 .num{text-align:right;font-variant-numeric:tabular-nums}
 
+/* Edge マネージドお気に入りツリー */
+.treenode{margin:4px 0}
+.treerow{display:flex;gap:7px;align-items:center;background:#0f131b;border:1px solid var(--line);
+  border-radius:9px;padding:7px 10px}
+.treerow:hover{border-color:#33405a}
+.is-folder > .treerow{background:#141a24;border-color:#2c3646}
+.ticon{font-size:.95rem;min-width:20px;text-align:center}
+.tname{flex:0 0 200px;min-width:120px;padding:7px 9px;border-radius:7px;border:1px solid var(--line);
+  background:#0d1017;color:var(--fg);font-size:.88rem}
+.turl{flex:1;min-width:160px;padding:7px 9px;border-radius:7px;border:1px solid var(--line);
+  background:#0d1017;color:var(--fg);font-size:.85rem}
+.tname:focus,.turl:focus{border-color:var(--acc);outline:none}
+@media(max-width:640px){.tname{flex-basis:110px}}
+
 /* 開示パネル */
 .disclosure{background:#141a24;border-color:#2f3b4d}
 

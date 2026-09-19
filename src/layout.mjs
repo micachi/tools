@@ -8,6 +8,7 @@ export const SITE = [
   { cat: "作成・生成", items: [
     { slug: "qr",          title: "QRコード生成" },
     { slug: "intunestart", title: "Intune スタートレイアウト" },
+    { slug: "edge-favorites", title: "Edge マネージドお気に入り" },
     { slug: "password",    title: "パスワード一括生成" },
   ]},
   { cat: "検査・整形", items: [

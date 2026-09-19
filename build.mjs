@@ -39,6 +39,7 @@ const TOOLS = [
   { slug: "datecalc",    title: "日付計算｜便利ツール",                  desc: "日付の加算・2日付の差・営業日数・満年齢をUTC基準で正確に計算。タイムゾーンと夏時間のズレを排除しています。" },
   { slug: "intunestart", title: "Intune スタートメニュー レイアウト生成｜便利ツール", desc: "Windows 11 の LayoutModification.json を生成。Intune 設定カタログにそのまま投入でき、applyOnce のバージョン制限や AUMID 形式を検証します。", files: ["intunestart-core", "intunestart"] },
   { slug: "password",    title: "パスワード一括生成｜便利ツール",         desc: "暗号学的乱数で複数パスワードを一括生成。個数・文字数・文字種を指定でき、生成処理はブラウザ内で完結します。", files: ["password-core", "password-app"] },
+  { slug: "edge-favorites", title: "Edge マネージドお気に入り生成｜便利ツール", desc: "Microsoft Edge の ManagedFavorites ポリシー用 JSON をフォルダツリー編集で生成。Intune 設定カタログにそのまま投入できます。", files: ["edge-favorites-core", "edge-favorites"] },
 ];
 
 rmSync(OUT, { recursive: true, force: true });
