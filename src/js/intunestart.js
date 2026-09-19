@@ -2,6 +2,8 @@
   "use strict";
   const $ = (id) => document.getElementById(id);
   let pins = [];
+  // 双方向バインディングのループ防止: プログラムによる書き込み中は input ハンドラを止める
+  let syncing = false;
 
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -70,24 +72,60 @@
     }));
   }
 
+  function setStatus(ok, html) {
+    const v = $("validation");
+    v.className = "valid " + (ok ? "ok" : "err");
+    v.innerHTML = html;
+    $("cp").disabled = !ok;
+    $("dl").disabled = !ok;
+  }
+
+  /** ピン一覧 → JSON（出力欄へ書き込む） */
   function renderOut() {
     const applyOnce = $("applyOnce").checked;
+    $("aoWarn").hidden = !applyOnce;
     const errs = IJS.validate(pins, applyOnce);
-    const v = $("validation");
     if (errs.length) {
-      v.className = "valid err";
-      v.innerHTML = "<b>✕ 検証エラー " + errs.length + " 件</b><ul>" + errs.map((e) => `<li>${esc(e)}</li>`).join("") + "</ul>";
-      $("dl").disabled = true; $("cp").disabled = true;
-    } else {
-      const obj = IJS.buildLayout(pins, applyOnce);
-      const ok = IJS.roundTripOk(obj);
-      v.className = "valid ok";
-      v.innerHTML = `<b>✓ 検証通過</b>　<span class="sub">ピン ${obj.pinnedList.length} 件 ／ applyOnce=${obj.applyOnce} ／ 往復整合 ${ok ? "OK" : "NG"}</span>`;
-      $("dl").disabled = !ok; $("cp").disabled = !ok;
-      $("out").value = IJS.toJson(obj);
+      setStatus(false, `<b>✕ 検証エラー ${errs.length} 件</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
+      return;
     }
-    // applyOnce のバージョン注意
-    $("aoWarn").hidden = !$("applyOnce").checked;
+    const obj = IJS.buildLayout(pins, applyOnce);
+    const ok = IJS.roundTripOk(obj);
+    setStatus(ok, `<b>${ok ? "✓ 検証通過" : "✕ 往復整合エラー"}</b>　<span class="sub">ピン ${obj.pinnedList.length} 件 ／ applyOnce=${obj.applyOnce}</span>`);
+    if (ok) {
+      syncing = true;
+      $("out").value = IJS.toJson(obj);
+      syncing = false;
+    }
+  }
+
+  /** JSON 欄 → ピン一覧（ユーザーが JSON を編集/貼り付けした時） */
+  function importFromOut() {
+    if (syncing) return;
+    const txt = $("out").value;
+    if (!txt.trim()) { setStatus(false, "<b>✕ JSON が空です</b>"); return; }
+    let r;
+    try {
+      r = IJS.fromJson(txt);
+    } catch (e) {
+      setStatus(false, `<b>✕ 取り込み失敗</b><ul><li>${esc(e.message || e)}</li></ul><span class="sub">※ 既存のピン一覧は保持しています。JSON を直すと再取り込みします。</span>`);
+      return;
+    }
+    pins = r.pins;
+    syncing = true;
+    $("applyOnce").checked = r.applyOnce;
+    syncing = false;
+    $("aoWarn").hidden = !r.applyOnce;
+    renderRows();
+
+    const errs = IJS.validate(pins, r.applyOnce);
+    const warn = r.warnings.length
+      ? `<br><span class="sub">注意: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
+    if (errs.length) {
+      setStatus(false, `<b>⚠ 取り込んだが検証エラー ${errs.length} 件</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
+    } else {
+      setStatus(true, `<b>✓ JSON から取り込みました</b>　<span class="sub">ピン ${pins.length} 件 ／ applyOnce=${r.applyOnce}</span>${warn}`);
+    }
   }
 
   function render() { renderRows(); renderOut(); }
@@ -119,7 +157,7 @@
     e.target.value = "";
   });
   $("clear").addEventListener("click", () => { pins = []; render(); });
-  $("applyOnce").addEventListener("change", renderOut);
+  $("applyOnce").addEventListener("change", () => { if (!syncing) renderOut(); });
   $("cp").addEventListener("click", async () => {
     try { await navigator.clipboard.writeText($("out").value);
       $("cp").textContent = "✓ コピー完了"; setTimeout(() => ($("cp").textContent = "JSON をコピー"), 1200); } catch {}
@@ -133,31 +171,19 @@
     URL.revokeObjectURL(a.href);
   });
 
-  /* ---- インポート ---- */
-  function doImport(text) {
-    const msg = $("impMsg");
-    if (!text || !text.trim()) { msg.className = "valid err"; msg.textContent = "⚠ JSON を入力してください"; return; }
-    try {
-      const r = IJS.fromJson(text);
-      pins = r.pins;
-      $("applyOnce").checked = r.applyOnce;
-      render();
-      const w = r.warnings.length
-        ? `<br><span class="sub">注意: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
-      msg.className = "valid ok";
-      msg.innerHTML = `✓ 読み込み完了 — ピン ${pins.length} 件 ／ applyOnce=${r.applyOnce}${w}`;
-    } catch (e) {
-      msg.className = "valid err";
-      msg.innerHTML = "✕ " + esc(e.message || e);
-    }
-  }
-  $("impBtn").addEventListener("click", () => doImport($("imp").value));
+  /* ---- JSON 欄からの取り込み（編集可のため input で） ---- */
+  let impTimer = null;
+  $("out").addEventListener("input", () => { clearTimeout(impTimer); impTimer = setTimeout(importFromOut, 400); });
   $("impFile").addEventListener("change", (e) => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
     const rd = new FileReader();
-    rd.onload = () => { $("imp").value = rd.result; $("impName").textContent = f.name; doImport(rd.result); };
-    rd.onerror = () => { $("impMsg").className = "valid err"; $("impMsg").textContent = "✕ ファイルを読み込めませんでした"; };
+    rd.onload = () => {
+      syncing = true; $("out").value = rd.result; syncing = false;
+      $("impName").textContent = f.name;
+      importFromOut();
+    };
+    rd.onerror = () => setStatus(false, "<b>✕ ファイルを読み込めませんでした</b>");
     rd.readAsText(f, "utf-8");
   });
 
