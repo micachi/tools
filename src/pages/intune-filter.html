@@ -1,0 +1,73 @@
+<h1>Intune 割り当てフィルター 生成</h1>
+<p class="lead">Microsoft Intune の割り当てフィルター（ルール構文）を、プロパティと演算子を選ぶだけで生成します。
+<b>プロパティ名・演算子・値の制約は公式リファレンス準拠</b>で、不正な組み合わせはその場でエラーになります。</p>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:14px">
+    <div style="flex:1;min-width:240px">
+      <div class="lb">よく使うフィルターを読み込む</div>
+      <select id="preset"></select>
+    </div>
+    <div style="align-self:flex-end"><button id="add" class="primary">＋ 条件を追加</button></div>
+    <div style="align-self:flex-end"><button id="clear">全消去</button></div>
+  </div>
+  <div id="rows"></div>
+</section>
+
+<section class="panel">
+  <div id="validation" class="valid"></div>
+  <div class="field" style="margin-top:12px">
+    <label for="out">ルール構文　<span class="sub">— 編集可。既存のルールを貼り付ければ上の条件に反映されます</span></label>
+    <textarea id="out" class="mono" style="min-height:150px" spellcheck="false"></textarea>
+  </div>
+  <button id="cp" class="primary">ルールをコピー</button>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">書式</h2>
+  <p style="font-size:.88rem;margin:0 0 8px"><code class="mono">([entity].[property name] [operation] [value])</code>　— Entra の動的グループに似た形式です。</p>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li>プロパティ・演算子・値は<b>大文字小文字を区別しません</b></li>
+    <li>括弧と<b>入れ子がサポート</b>されます（入れ子を使うと簡易ルールビルダーは無効になり、ルール構文エディターでのみ編集可能）</li>
+    <li><code class="mono">Null</code> / <code class="mono">$Null</code> は <code class="mono">-eq</code> / <code class="mono">-ne</code> でのみ使用可</li>
+    <li>テナントあたり <b>200 個まで</b>、1フィルター <b>3,072 文字まで</b></li>
+  </ul>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">演算子</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+    <thead><tr style="color:var(--mut);text-align:left">
+      <th style="padding:8px;border-bottom:1px solid var(--line)">演算子</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">意味</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">値の形</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-and / -or</td><td style="padding:8px;border-bottom:1px solid var(--line)">条件の結合</td><td style="padding:8px;border-bottom:1px solid var(--line)">—</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-eq / -ne</td><td style="padding:8px;border-bottom:1px solid var(--line)">等しい / 等しくない</td><td style="padding:8px;border-bottom:1px solid var(--line)">文字列・配列・Null</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-gt / -lt / -ge / -le</td><td style="padding:8px;border-bottom:1px solid var(--line)">大小比較</td><td style="padding:8px;border-bottom:1px solid var(--line)"><b>operatingSystemVersion のみ</b></td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-startsWith</td><td style="padding:8px;border-bottom:1px solid var(--line)">で始まる</td><td style="padding:8px;border-bottom:1px solid var(--line)">文字列</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-contains / -notContains</td><td style="padding:8px;border-bottom:1px solid var(--line)">を含む / を含まない</td><td style="padding:8px;border-bottom:1px solid var(--line)">文字列</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-in / -notIn</td><td style="padding:8px;border-bottom:1px solid var(--line)">配列に含まれる / 含まれない</td><td style="padding:8px;border-bottom:1px solid var(--line)"><code class="mono">["a","b"]</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">使用可能なプロパティ（デバイス）</h2>
+  <div id="propTable" class="scrollx"></div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">展開時の注意</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>フィルターは「グループ」ではなく「絞り込み」</b> — 割り当て時に Include / Exclude で重ねる前提です</li>
+    <li><b>評価タイミング</b> — デバイスの登録時・Intune へのチェックイン時など、ポリシー評価の都度。動的グループのようなメンバー処理遅延はありません</li>
+    <li><b>動的グループとの使い分け</b> — Conditional Access やライセンスなど<b>ワークロード横断が必要なら動的グループ</b>、Intune 固有のデバイス絞り込みならフィルターが向いています</li>
+    <li><b>管理アプリ用フィルター</b> — アプリ保護ポリシーとアプリ構成ポリシーにのみ適用され、コンプライアンスやデバイス構成プロファイルには適用されません</li>
+    <li><b>Android デバイス管理者（DA）は非推奨</b> — GMS 搭載デバイスでは利用不可。他の管理方式への移行が推奨されています</li>
+  </ul>
+  <p class="sub" style="margin:12px 0 0">
+    参考: <a href="https://learn.microsoft.com/en-us/intune/fundamentals/filters/ref-device-properties" rel="noopener">Microsoft Learn — App and device properties, operators, and rule editing</a>
+  </p>
+</section>

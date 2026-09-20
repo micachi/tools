@@ -1,0 +1,73 @@
+<h1>Intune Assignment Filter Generator</h1>
+<p class="lead">Build Microsoft Intune assignment filter rule syntax by picking properties and operators.
+<b>Property names, operators and value constraints follow the official reference</b>, so invalid combinations error out immediately.</p>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:14px">
+    <div style="flex:1;min-width:240px">
+      <div class="lb">Load a common filter</div>
+      <select id="preset"></select>
+    </div>
+    <div style="align-self:flex-end"><button id="add" class="primary">＋ Add condition</button></div>
+    <div style="align-self:flex-end"><button id="clear">Clear all</button></div>
+  </div>
+  <div id="rows"></div>
+</section>
+
+<section class="panel">
+  <div id="validation" class="valid"></div>
+  <div class="field" style="margin-top:12px">
+    <label for="out">Rule syntax　<span class="sub">— editable. Paste an existing rule to load it into the conditions above</span></label>
+    <textarea id="out" class="mono" style="min-height:150px" spellcheck="false"></textarea>
+  </div>
+  <button id="cp" class="primary">Copy rule</button>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Syntax</h2>
+  <p style="font-size:.88rem;margin:0 0 8px"><code class="mono">([entity].[property name] [operation] [value])</code>　— similar in shape to Entra dynamic groups.</p>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li>Properties, operators and values are <b>case insensitive</b></li>
+    <li>Parentheses and <b>nesting are supported</b> — using nesting disables the basic rule builder, leaving only the rule syntax editor</li>
+    <li><code class="mono">Null</code> / <code class="mono">$Null</code> may only be used with <code class="mono">-eq</code> / <code class="mono">-ne</code></li>
+    <li>Up to <b>200 filters per tenant</b>, <b>3,072 characters per filter</b></li>
+  </ul>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Operators</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+    <thead><tr style="color:var(--mut);text-align:left">
+      <th style="padding:8px;border-bottom:1px solid var(--line)">Operator</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">Meaning</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">Value shape</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-and / -or</td><td style="padding:8px;border-bottom:1px solid var(--line)">Combine conditions</td><td style="padding:8px;border-bottom:1px solid var(--line)">—</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-eq / -ne</td><td style="padding:8px;border-bottom:1px solid var(--line)">Equals / not equals</td><td style="padding:8px;border-bottom:1px solid var(--line)">string, array, Null</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-gt / -lt / -ge / -le</td><td style="padding:8px;border-bottom:1px solid var(--line)">Comparison</td><td style="padding:8px;border-bottom:1px solid var(--line)"><b>operatingSystemVersion only</b></td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-startsWith</td><td style="padding:8px;border-bottom:1px solid var(--line)">Begins with</td><td style="padding:8px;border-bottom:1px solid var(--line)">string</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-contains / -notContains</td><td style="padding:8px;border-bottom:1px solid var(--line)">Contains / does not contain</td><td style="padding:8px;border-bottom:1px solid var(--line)">string</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">-in / -notIn</td><td style="padding:8px;border-bottom:1px solid var(--line)">In array / not in array</td><td style="padding:8px;border-bottom:1px solid var(--line)"><code class="mono">["a","b"]</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Available device properties</h2>
+  <div id="propTable" class="scrollx"></div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">Deployment notes</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>A filter is a refinement, not a group</b> — you layer it onto an assignment in Include / Exclude mode</li>
+    <li><b>Evaluation timing</b> — at enrollment, at check-in, and whenever a policy evaluates. No group-membership processing delay like dynamic groups have</li>
+    <li><b>Filters vs dynamic groups</b> — if you need <b>cross-workload targeting</b> (Conditional Access, licensing) or Autopilot profile assignment, use dynamic groups; use filters for Intune-specific device targeting</li>
+    <li><b>Managed-app filters</b> — apply only to app protection policies and app configuration policies, not to compliance or device configuration profiles</li>
+    <li><b>Android device administrator (DA) is deprecated</b> — unavailable on GMS devices; migrating to another management option is recommended</li>
+  </ul>
+  <p class="sub" style="margin:12px 0 0">
+    Reference: <a href="https://learn.microsoft.com/en-us/intune/fundamentals/filters/ref-device-properties" rel="noopener">Microsoft Learn — App and device properties, operators, and rule editing</a>
+  </p>
+</section>

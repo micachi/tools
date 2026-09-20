@@ -40,6 +40,7 @@ export const SITE = [
   { cat: { ja: "作成・生成", en: "Create & generate" }, items: [
     { slug: "qr",             title: { ja: "QRコード生成", en: "QR Code Generator" } },
     { slug: "intunestart",    title: { ja: "Intune スタートレイアウト", en: "Intune Start Layout" } },
+    { slug: "intune-filter",  title: { ja: "Intune 割り当てフィルター", en: "Intune Assignment Filter" } },
     { slug: "managed-bookmarks", title: { ja: "管理対象ブックマーク（Edge / Chrome）", en: "Managed Bookmarks (Edge / Chrome)" } },
     { slug: "password",       title: { ja: "パスワード一括生成", en: "Bulk Password Generator" } },
   ]},

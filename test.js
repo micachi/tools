@@ -234,7 +234,7 @@ console.log("\n=== 9. DOM ID 整合性（JS が参照する id が HTML に実�
   const fs2 = require("fs");
   const jsDir = path.join(__dirname, "src", "js");
   const pgDir = path.join(__dirname, "src", "pages");
-  const skip = ["intunestart-core.js", "password-core.js", "password-app.js", "managed-bookmarks-core.js"]; // DOM 非依存 or 複数ファイル構成
+  const skip = ["intunestart-core.js", "password-core.js", "password-app.js", "managed-bookmarks-core.js", "intune-filter-core.js"]; // DOM 非依存 or 複数ファイル構成
 
   const jsFiles = fs2.readdirSync(jsDir).filter((f) => f.endsWith(".js") && !skip.includes(f));
   ok("対象 JS を検出", jsFiles.length >= 7, jsFiles.length + " 件");
@@ -661,6 +661,87 @@ console.log("\n=== 20. Chrome ManagedBookmarks 対応 ===");
   for (const old of ["edge-favorites/index.html", "en/edge-favorites/index.html"]) {
     const h = read(old);
     ok(`${old}: 新ページへリダイレクト`, h.includes('url=/managed-bookmarks/') && h.includes('content="noindex"'));
+  }
+}
+
+console.log("\n=== 21. Intune 割り当てフィルター ルール生成 ===");
+{
+  const IFT = require(path.join(__dirname, "src", "js", "intune-filter-core.js"));
+
+  /* --- 生成 --- */
+  const r1 = [{ entity: "device", prop: "manufacturer", op: "eq", values: ["Dell"], join: "and" }];
+  ok("単一条件の生成", IFT.build(r1) === '(device.manufacturer -eq "Dell")', IFT.build(r1));
+
+  const r2 = [
+    { entity: "device", prop: "deviceOwnership", op: "eq", values: ["Corporate"], join: "and" },
+    { entity: "device", prop: "operatingSystemVersion", op: "ge", values: ["10.0.22000"], join: "and" },
+  ];
+  ok("and 結合の生成",
+    IFT.build(r2) === '(device.deviceOwnership -eq "Corporate") and (device.operatingSystemVersion -ge 10.0.22000)',
+    IFT.build(r2));
+  ok("バージョン比較はクォートなし（公式例準拠）",
+    IFT.build(r2).includes("-ge 10.0.22000") && !IFT.build(r2).includes('"10.0.22000"'));
+
+  const r3 = [{ entity: "device", prop: "manufacturer", op: "in", values: ["Dell", "Lenovo"], join: "and" }];
+  ok("-in は配列形式", IFT.build(r3) === '(device.manufacturer -in ["Dell","Lenovo"])', IFT.build(r3));
+
+  const r4 = [{ entity: "device", prop: "isRooted", op: "eq", values: ["False"], join: "and" }];
+  ok("真偽値プロパティ", IFT.build(r4) === '(device.isRooted -eq "False")', IFT.build(r4));
+
+  const r5 = [{ entity: "device", prop: "deviceName", op: "eq", values: ["Null"], join: "and" }];
+  ok("Null はクォートなし", IFT.build(r5) === '(device.deviceName -eq Null)', IFT.build(r5));
+
+  /* --- 検証：公式の制約を守っている --- */
+  ok("正常系でエラーなし", IFT.validate(r2).length === 0, JSON.stringify(IFT.validate(r2)));
+  ok("空条件を検出", IFT.validate([]).length > 0);
+  ok("未知プロパティを検出",
+    IFT.validate([{ entity: "device", prop: "noSuchProp", op: "eq", values: ["x"] }]).length > 0);
+  ok("app エンティティのプロパティは device では使えない",
+    IFT.validate([{ entity: "device", prop: "appVersion", op: "eq", values: ["1.0"] }]).length > 0);
+  ok("operatingSystemVersion 以外の -gt を拒否",
+    IFT.validate([{ entity: "device", prop: "manufacturer", op: "gt", values: ["S"] }]).length > 0);
+  ok("Null を -contains で使った場合を拒否",
+    IFT.validate([{ entity: "device", prop: "deviceName", op: "contains", values: ["Null"] }]).length > 0);
+  ok("真偽値に True/False 以外を拒否",
+    IFT.validate([{ entity: "device", prop: "isRooted", op: "eq", values: ["yes"] }]).length > 0);
+  ok("列挙値外を拒否（deviceOwnership）",
+    IFT.validate([{ entity: "device", prop: "deviceOwnership", op: "eq", values: ["Company"] }]).length > 0);
+  ok("列挙値は大文字小文字を区別しない（公式仕様）",
+    IFT.validate([{ entity: "device", prop: "deviceOwnership", op: "eq", values: ["corporate"] }]).length === 0,
+    JSON.stringify(IFT.validate([{ entity: "device", prop: "deviceOwnership", op: "eq", values: ["corporate"] }])));
+  ok("-gt に非バージョン値を拒否",
+    IFT.validate([{ entity: "device", prop: "operatingSystemVersion", op: "gt", values: ["abc"] }]).length > 0);
+  ok("値の未入力検出",
+    IFT.validate([{ entity: "device", prop: "manufacturer", op: "eq", values: [""] }]).length > 0);
+  ok("文字数上限 3072 を超えたらエラー", (() => {
+    const many = Array.from({ length: 400 }, () => ({
+      entity: "device", prop: "deviceCategory", op: "contains", values: ["a-long-category-name-here"], join: "and" }));
+    return IFT.validate(many).some((e) => /3,?072|3072/.test(e));
+  })());
+
+  /* --- パース往復 --- */
+  const src = '(device.deviceOwnership -eq "Corporate") and (device.operatingSystemVersion -ge 10.0.22000) or (device.manufacturer -in ["Dell","Lenovo"])';
+  const parsed = IFT.parse(src);
+  ok("パースで 3 条件", parsed.length === 3, String(parsed.length));
+  ok("結合子が復元される", parsed[1].join === "and" && parsed[2].join === "or",
+    parsed.map((p) => p.join).join(","));
+  ok("往復で同一の構文になる", IFT.build(parsed) === src, IFT.build(parsed));
+  ok("配列値が往復する", parsed[2].values.length === 2 && parsed[2].values[0] === "Dell");
+  ok("空文字のパースは例外", (() => { try { IFT.parse(""); return false; } catch { return true; } })());
+  ok("形式外のパースは例外", (() => { try { IFT.parse("hello world"); return false; } catch { return true; } })());
+
+  /* --- プリセットが全て検証を通ること --- */
+  const badPreset = IFT.PRESETS.filter((p) => IFT.validate(p.rules).length > 0);
+  ok(`全プリセット（${IFT.PRESETS.length} 個）が検証を通過`, badPreset.length === 0,
+    badPreset.map((p) => p.name + ": " + IFT.validate(p.rules).join("|")).join(" / "));
+
+  /* --- ページ --- */
+  for (const p of ["intune-filter/index.html", "en/intune-filter/index.html"]) {
+    const h = fs.readFileSync(path.join(DIST, p), "utf8");
+    ok(`${p}: 構文エディタとプリセットがある`,
+      h.includes('id="out"') && h.includes('id="preset"') && h.includes('id="rows"'));
+    ok(`${p}: 3072 文字の上限を明記`, h.includes("3,072") || h.includes("3072"));
+    ok(`${p}: Null の制限を明記`, h.includes("$Null"));
   }
 }
 

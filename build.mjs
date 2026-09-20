@@ -56,6 +56,9 @@ const TOOLS = [
   { slug: "intunestart", files: ["intunestart-core", "intunestart"], meta: {
       ja: { title: "Intune スタートメニュー レイアウト生成｜便利ツール", desc: "Windows 11 の LayoutModification.json を生成。Intune 設定カタログにそのまま投入でき、applyOnce のバージョン制限や AUMID 形式を検証します。" },
       en: { title: "Intune Start Layout Generator", desc: "Generate Windows 11 LayoutModification.json, ready for the Intune settings catalog, with applyOnce and AUMID validation." } } },
+  { slug: "intune-filter", files: ["intune-filter-core", "intune-filter"], meta: {
+      ja: { title: "Intune 割り当てフィルター 生成｜便利ツール", desc: "Intune の割り当てフィルター ルール構文をプロパティと演算子を選ぶだけで生成。公式リファレンス準拠で不正な組み合わせを検出します。" },
+      en: { title: "Intune Assignment Filter Generator", desc: "Build Intune assignment filter rule syntax by picking properties and operators, validated against the official reference." } } },
   { slug: "password", files: ["password-core", "password-app"], meta: {
       ja: { title: "パスワード一括生成｜便利ツール", desc: "暗号学的乱数で複数パスワードを一括生成。個数・文字数・文字種を指定でき、生成処理はブラウザ内で完結します。" },
       en: { title: "Bulk Password Generator", desc: "Generate many passwords from a cryptographic RNG. Set count, length and character classes; generation completes in your browser." } } },

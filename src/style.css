@@ -168,6 +168,20 @@ th{color:var(--mut);font-weight:600;font-size:.83rem}
   background:#1c2330;color:var(--fg);font-size:.88rem;cursor:pointer;transition:.15s}
 .filebtn:hover{background:#242c3a;border-color:#33405a}
 
+/* Intune 割り当てフィルターの条件行 */
+.frow{display:flex;gap:7px;align-items:center;margin:6px 0;flex-wrap:wrap}
+.frow select,.frow input{padding:7px 9px;border-radius:7px;border:1px solid var(--line);
+  background:#0d1017;color:var(--fg);font-size:.86rem}
+.fjoin{flex:0 0 74px}
+.fjoin-space{flex:0 0 74px}
+.fent{flex:0 0 110px}
+.fprop{flex:1 1 230px;min-width:180px}
+.fop{flex:0 0 130px}
+.fval{flex:1 1 200px;min-width:150px}
+.frow .mono,.fprop .mono{font-size:.78rem;color:var(--mut)}
+.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:700px){.fjoin,.fjoin-space{flex-basis:64px}.fent{flex-basis:92px}.fop{flex-basis:110px}}
+
 /* 展開ターゲットのセグメント切替（Edge / Chrome） */
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#0d1017}
 .seg-btn{border:0;border-radius:0;background:transparent;color:var(--mut);
