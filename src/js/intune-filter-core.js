@@ -234,9 +234,14 @@ const IFT = (() => {
       if (def.type === "bool" && !/^(true|false)$/i.test(clean[0])) {
         errs.push(`${at}: True / False のいずれかを入力してください`);
       }
-      if (def.values && !isNull && ["eq", "ne"].includes(r.op)) {
-        const ok = def.values.some((v) => v.toLowerCase() === clean[0].toLowerCase());
-        if (!ok) errs.push(`${at}: "${clean[0]}" は列挙値にありません（例: ${def.values.slice(0, 4).join(" / ")}…）`);
+      if (def.values && !isNull && ["eq", "ne", "in", "notIn"].includes(r.op)) {
+        // -in / -notIn も列挙値を検証する（素通りすると不正な SKU をそのまま展開してしまう）
+        const bad = clean.filter((v) => !def.values.some((x) => x.toLowerCase() === v.toLowerCase()));
+        if (bad.length === 1 && clean.length === 1) {
+          errs.push(`${at}: "${bad[0]}" は列挙値にありません（例: ${def.values.slice(0, 4).join(" / ")}…）`);
+        } else if (bad.length) {
+          errs.push(`${at}: 列挙値にない値: ${bad.map((v) => `"${v}"`).join(", ")}（例: ${def.values.slice(0, 4).join(" / ")}…）`);
+        }
       }
       if (def.type === "version" && ["gt", "lt", "ge", "le"].includes(r.op)) {
         if (!/^[0-9][0-9.]*$/.test(clean[0])) {

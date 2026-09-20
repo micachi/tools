@@ -711,6 +711,14 @@ console.log("\n=== 21. Intune 割り当てフィルター ルール生成 ===");
     IFT.validate([{ entity: "device", prop: "isRooted", op: "eq", values: ["yes"] }]).length > 0);
   ok("列挙値外を拒否（deviceOwnership）",
     IFT.validate([{ entity: "device", prop: "deviceOwnership", op: "eq", values: ["Company"] }]).length > 0);
+  ok("-in も列挙値を検証する（素通りバグの回帰）",
+    IFT.validate([{ entity: "device", prop: "operatingSystemSKU", op: "in", values: ["Enterprise", "NotARealSku"] }]).length > 0,
+    JSON.stringify(IFT.validate([{ entity: "device", prop: "operatingSystemSKU", op: "in", values: ["Enterprise", "NotARealSku"] }])));
+  ok("-in の正常な列挙値は通る",
+    IFT.validate([{ entity: "device", prop: "operatingSystemSKU", op: "in", values: ["Enterprise", "Education"] }]).length === 0,
+    JSON.stringify(IFT.validate([{ entity: "device", prop: "operatingSystemSKU", op: "in", values: ["Enterprise", "Education"] }])));
+  ok("-notIn の不正値も弾く",
+    IFT.validate([{ entity: "device", prop: "operatingSystemSKU", op: "notIn", values: ["Bogus"] }]).length > 0);
   ok("列挙値は大文字小文字を区別しない（公式仕様）",
     IFT.validate([{ entity: "device", prop: "deviceOwnership", op: "eq", values: ["corporate"] }]).length === 0,
     JSON.stringify(IFT.validate([{ entity: "device", prop: "deviceOwnership", op: "eq", values: ["corporate"] }])));
@@ -797,6 +805,34 @@ console.log("\n=== 22. Win32 検出ルール生成 ===");
     W3D.validate([{ type: "registry", keyPath: "HKLM\\Software\\Vendor\\App", valueName: "Version" }]).length === 0);
   ok("ルール 0 個を弾く（最低 1 個必要）", W3D.validate([]).length > 0);
 
+  /* --- 生成 PowerShell の実行時バグ --- */
+  ok("file: 環境変数を展開してから LiteralPath（%ProgramFiles% が効く）",
+    W3D.psCheck({ type: "file", path: "%ProgramFiles%\\V", fileOrFolder: "a.exe", exists: true })
+      .includes("[Environment]::ExpandEnvironmentVariables"));
+  ok("file: 存在チェックも Join-Path + -LiteralPath", 
+    W3D.psCheck({ type: "file", path: "C:\\V", fileOrFolder: "a.exe", exists: true }).includes("Test-Path -LiteralPath (Join-Path $path"));
+  ok("reg: HKCR も PowerShell ドライブ形式", W3D.psRegPath("HKCR\\A\\B") === "HKCR:\\A\\B", W3D.psRegPath("HKCR\\A\\B"));
+  ok("reg: HKU / HKCC / 正式名も変換",
+    W3D.psRegPath("HKU\\X") === "HKU:\\X" && W3D.psRegPath("HKCC\\X") === "HKCC:\\X" &&
+    W3D.psRegPath("HKEY_CLASSES_ROOT\\X") === "HKCR:\\X");
+  ok("reg: 生成スクリプトが HKCR: を使う",
+    W3D.psCheck({ type: "registry", keyPath: "HKCR\\Vendor.App\\1" }).includes('Test-Path -LiteralPath "HKCR:\\Vendor.App\\1"'));
+  ok("file: 不正な minVersion 形式を弾く",
+    W3D.validateRule({ type: "file", path: "C:\\a", fileOrFolder: "x.exe", exists: false, minVersion: "abc" }).length > 0);
+  ok("file: 正しい minVersion（1.2 / 1.2.3.4）は通る",
+    W3D.validateRule({ type: "file", path: "C:\\a", fileOrFolder: "x.exe", exists: false, minVersion: "1.2" }).length === 0 &&
+    W3D.validateRule({ type: "file", path: "C:\\a", fileOrFolder: "x.exe", exists: false, minVersion: "1.2.3.4" }).length === 0);
+  ok("file: バージョン情報なしでも例外にしない（TryParse）",
+    W3D.psCheck({ type: "file", path: "C:\\a", fileOrFolder: "x.exe", exists: false, minVersion: "1.2.0.0" }).includes("[Version]::TryParse"));
+  ok("msi: Win32_Product の列挙（遅い / 整合性チェック誘発）を呼ばない",
+    !W3D.psCheck({ type: "msi", productCode: "{2A1B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}" }).match(/Get-(WmiObject|CimInstance)[^\n]*Win32_Product/) &&
+    W3D.psCheck({ type: "msi", productCode: "{2A1B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}" }).includes("Uninstall"));
+  ok("msi: WOW6432Node と HKCU も照合対象",
+    W3D.psCheck({ type: "msi", productCode: "{2A1B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}" }).includes("WOW6432Node") &&
+    W3D.psCheck({ type: "msi", productCode: "{2A1B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}" }).includes("HKCU:"));
+  ok("msi: バージョン確認時に値未入力 を弾く",
+    W3D.validateRule({ type: "msi", productCode: "{2A1B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}", versionCheck: true }).length > 0);
+
   const script = W3D.buildScript([
     msi,
     { type: "file", path: "C:\\App", fileOrFolder: "app.exe", exists: true },
@@ -869,7 +905,19 @@ console.log("\n=== 24. Graph API 照会スニペット ===");
     ["$filter=", "$select=id,deviceName", "$orderby=", "$top=50", "$count=true"].every((s) => u.includes(s)), u);
   ok("クエリ未指定なら ? を付けない", !IGR.buildUrl({ path: P }).includes("?"));
   const ps = IGR.buildPowerShell({ path: P, select: ["id"], top: 10 });
-  ok("PowerShell: Get-MgDeviceManagementManagedDevices", ps.includes("Get-MgDeviceManagementManagedDevices"));
+  ok("PowerShell: SDK は単数形コマンドレット（複数形は存在しない）",
+    ps.includes("Get-MgDeviceManagementManagedDevice") && !ps.includes("Get-MgDeviceManagementManagedDevices"),
+    ps.split("\n").pop());
+  ok("PowerShell: Connect-MgGraph が有効な構文（JS 三項演算子の混入なし）",
+    ps.includes('Connect-MgGraph -Scopes "DeviceManagementManagedDevices.Read.All"') && !ps.includes("$($env:"),
+    ps.split("\n")[2]);
+  ok("PowerShell: 全リソースでコマンドレット名が解決",
+    IGR.RESOURCES.every((r) => !!IGR.psCmdOf(r.path)),
+    IGR.RESOURCES.filter((r) => !IGR.psCmdOf(r.path)).map((r) => r.path).join(",") || "13/13");
+  ok("PowerShell: deviceManagementScripts は重複を畳んだ Get-MgDeviceManagementScript",
+    IGR.psCmdOf("deviceManagement/deviceManagementScripts") === "Get-MgDeviceManagementScript");
+  ok("PowerShell: 未知パスは Invoke-MgGraphRequest にフォールバック",
+    IGR.buildPowerShell({ path: "deviceManagement/unknownThing" }).includes("Invoke-MgGraphRequest"));
   ok("PowerShell: 必要アプリ権限をコメント", ps.includes("DeviceManagementManagedDevices.Read.All"));
   ok("PowerShell: -Top が反映される", ps.includes("-Top 10"));
   ok("curl: ConsistencyLevel ヘッダ付き", IGR.buildCurl({ path: P }).includes("ConsistencyLevel: eventual"));

@@ -54,6 +54,28 @@ const IGR = (() => {
 
   const resourceOf = (p) => RESOURCES.find((r) => r.path === p);
 
+  /* PowerShell SDK のコマンドレット名。
+     SDK は集合そのものではなく「単数形」のコマンドレットを生やす（複数形は存在しない）。
+     検証: Microsoft.Graph.DeviceManagement*.psd1 の FunctionsToExport /
+           microsoftgraph/msgraph-sdk-powershell の examples / 実運用スクリプト */
+  const PS_CMD = {
+    "deviceManagement/managedDevices": "Get-MgDeviceManagementManagedDevice",
+    "deviceManagement/deviceConfigurations": "Get-MgDeviceManagementDeviceConfiguration",
+    "deviceManagement/deviceCompliancePolicies": "Get-MgDeviceManagementDeviceCompliancePolicy",
+    "deviceManagement/assignmentFilters": "Get-MgDeviceManagementAssignmentFilter",
+    "deviceManagement/deviceEnrollmentConfigurations": "Get-MgDeviceManagementDeviceEnrollmentConfiguration",
+    // deviceManagementScripts は "DeviceManagement" の重複を畳んだ名前になる
+    "deviceManagement/deviceManagementScripts": "Get-MgDeviceManagementScript",
+    "deviceManagement/deviceHealthScripts": "Get-MgDeviceManagementDeviceHealthScript",
+    "deviceManagement/deviceComplianceScripts": "Get-MgDeviceManagementDeviceComplianceScript",
+    "deviceManagement/deviceShellScripts": "Get-MgDeviceManagementDeviceShellScript",
+    "deviceManagement/deviceCustomAttributeShellScripts": "Get-MgDeviceManagementDeviceCustomAttributeShellScript",
+    "deviceManagement/mobileApps": "Get-MgDeviceManagementMobileApp",
+    "deviceManagement/managedAppRegistrations": "Get-MgDeviceManagementManagedAppRegistration",
+    "deviceManagement/reports": "Get-MgDeviceManagementReport",
+  };
+  const psCmdOf = (p) => PS_CMD[p] || null;
+
   /* ---- URL 生成 ---- */
   function buildUrl(o) {
     const ver = o.version || "v1.0";
@@ -70,13 +92,15 @@ const IGR = (() => {
   /* ---- PowerShell (Microsoft Graph SDK) 生成 ---- */
   function buildPowerShell(o) {
     const res = resourceOf(o.path);
-    const cmd = o.path
-      .replace(/^deviceManagement\//, "")
-      .replace(/\/(\w)/g, (_, c) => c.toUpperCase());
-    const mg = "Get-MgDeviceManagement" + cmd.charAt(0).toUpperCase() + cmd.slice(1);
+    const perm = res ? res.perm : "DeviceManagementManagedDevices.Read.All";
+    const cmd = psCmdOf(o.path);
     const lines = [`# 必要モジュール: Install-Module Microsoft.Graph -Scope CurrentUser`,
-                  `# 必要アプリ権限: ${res ? res.perm : "（リソース不明）"}`,
-                  `Connect-MgGraph -Scopes "$($env:GRAPH_TENANT_ID ? "" : "")${res ? res.perm : "DeviceManagementManagedDevices.Read.All"}"`];
+                  `# 必要アプリ権限: ${perm}`];
+    if (!cmd) {
+      lines.push(`# ※ このリソースコマンドレット名は未確認のため Invoke-MgGraphRequest を使います`);
+    }
+    // -Scopes に必要なアプリ権限を渡す。テナント固定は -TenantId "<tenant-id>" を追加
+    lines.push(`Connect-MgGraph -Scopes "${perm}"`);
     const args = [];
     if (o.filter) args.push(`-Filter "${o.filter.replace(/"/g, '`"')}"`);
     if (o.select && o.select.length) args.push(`-Select ${o.select.join(",")}`);
@@ -84,7 +108,7 @@ const IGR = (() => {
     if (o.top !== "" && o.top != null) args.push(`-Top ${o.top}`);
     if (o.count) args.push("-CountVariable cnt -ConsistencyLevel eventual");
     const all = args.length ? " " + args.join(" ") : "";
-    lines.push(`${mg}${all}`);
+    lines.push(cmd ? `${cmd}${all}` : `Invoke-MgGraphRequest -Method GET -Uri "${buildUrl(o)}"`);
     if (o.count) lines.push(`Write-Output "Total: $cnt"`);
     return lines.join("\n");
   }
@@ -129,7 +153,7 @@ const IGR = (() => {
     return errs;
   }
 
-  return { BASE, VERSIONS, RESOURCES, resourceOf, buildUrl, buildPowerShell, buildCurl, validate };
+  return { BASE, VERSIONS, RESOURCES, PS_CMD, resourceOf, psCmdOf, buildUrl, buildPowerShell, buildCurl, validate };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = IGR;

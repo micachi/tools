@@ -20,6 +20,24 @@ const W3D = (() => {
   const GUID_RE = /^\{?[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\}?$/;
   const HK_ROOTS = ["HKEY_LOCAL_MACHINE", "HKLM", "HKEY_CURRENT_USER", "HKCU", "HKEY_CLASSES_ROOT", "HKCR", "HKEY_USERS", "HKU", "HKEY_CURRENT_CONFIG", "HKCC"];
 
+  /* レジストリルート → PowerShell ドライブ（HKLM:\Software\... の形にしないと Test-Path が通らない） */
+  const PS_DRIVE = {
+    HKEY_LOCAL_MACHINE: "HKLM:", HKLM: "HKLM:",
+    HKEY_CURRENT_USER: "HKCU:", HKCU: "HKCU:",
+    HKEY_CLASSES_ROOT: "HKCR:", HKCR: "HKCR:",
+    HKEY_USERS: "HKU:", HKU: "HKU:",
+    HKEY_CURRENT_CONFIG: "HKCC:", HKCC: "HKCC:",
+  };
+  const VER_RE = /^\d+(\.\d+){1,3}$/;
+
+  /** レジストリパスを PowerShell ドライブ形式に変換（未マップは HKLM:） */
+  function psRegPath(k) {
+    const i = k.indexOf("\\");
+    const root = (i < 0 ? k : k.slice(0, i)).toUpperCase();
+    const rest = i < 0 ? "" : k.slice(i);
+    return (PS_DRIVE[root] || "HKLM:") + rest;
+  }
+
   const RULE_TYPES = EN
     ? { msi: "MSI", file: "File / Folder", registry: "Registry", script: "Custom script" }
     : { msi: "MSI", file: "ファイル / フォルダ", registry: "レジストリ", script: "カスタムスクリプト" };
@@ -34,6 +52,9 @@ const W3D = (() => {
       if (!r.productCode || !GUID_RE.test(r.productCode.trim())) {
         errs.push(`${at}: MSI プロダクトコードは GUID 形式である必要があります（例: {1B9C8F2A-…}）`);
       }
+      if (r.versionCheck && !String(r.productVersion || "").trim()) {
+        errs.push(`${at}: バージョンを確認する場合はプロダクトバージョンを入力してください`);
+      }
     }
     if (r.type === "file") {
       const p = (r.path || "").trim();
@@ -43,6 +64,9 @@ const W3D = (() => {
       }
       if (!r.fileOrFolder) errs.push(`${at}: 検出するファイル／フォルダ名を入力してください`);
       if (!r.exists && !r.minVersion) errs.push(`${at}: 「存在確認」か「最小バージョン」のいずれかを指定してください`);
+      if (r.minVersion && !VER_RE.test(String(r.minVersion).trim())) {
+        errs.push(`${at}: 最小バージョンは 1.2.0.0 のような「数字.数字」形式です（現在: ${r.minVersion}）`);
+      }
     }
     if (r.type === "registry") {
       const k = (r.keyPath || "").trim();
@@ -83,12 +107,24 @@ const W3D = (() => {
     if (r.type === "msi") {
       const code = (r.productCode || "").trim().replace(/[{}]/g, "").toUpperCase();
       const ver = r.versionCheck
-        ? `if ($mi.ProductVersion -ne "${String(r.productVersion || "").replace(/"/g, '""')}") {
+        ? `
+if ($mi.DisplayVersion -ne "${String(r.productVersion || "").replace(/"/g, '""')}") {
   # バージョン不一致 → 未検出
   exit 0
 }` : "";
       return `# MSI プロダクトコード ${code}${r.versionCheck ? ` + バージョン ${r.productVersion} を照合` : ""}
-$mi = Get-WmiObject Win32_Product -Filter "IdentifyingNumber = '{${code}}'" -ErrorAction SilentlyContinue
+# Win32_Product は列挙が遅く 60 秒のタイムアウトを超過しやすい上、インストーラの
+# 整合性チェック（自動修復）を誘発するため使わず、Uninstall レジストリで照合する。
+$code = "${code}"
+$keys = @(
+  "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\$code",
+  "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\$code",
+  "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\$code"
+)
+$mi = $null
+foreach ($k in $keys) {
+  if (Test-Path -LiteralPath $k) { $mi = Get-ItemProperty -LiteralPath $k; break }
+}
 if ($null -eq $mi) {
   # 未インストール → 未検出
   exit 0
@@ -98,33 +134,37 @@ if ($null -eq $mi) {
     if (r.type === "file") {
       const p = String(r.path || "").replace(/"/g, '""');
       const f = String(r.fileOrFolder || "").replace(/"/g, '""');
+      // %ProgramFiles% などの環境変数は -LiteralPath では展開されないため先に展開する
+      const expand = `$path = [Environment]::ExpandEnvironmentVariables("${p}")`;
       if (r.minVersion) {
         return `# ${p}\\${f} のファイルバージョンが ${r.minVersion} 以上かを検出
-$f = Get-Item -LiteralPath "${p}\\${f}" -ErrorAction SilentlyContinue
+${expand}
+$f = Get-Item -LiteralPath (Join-Path $path "${f}") -ErrorAction SilentlyContinue
 if ($null -eq $f) { exit 0 }
-$fv = [Version]$f.VersionInfo.FileVersion
+$raw = $f.VersionInfo.FileVersion
+if ([string]::IsNullOrWhiteSpace($raw)) { exit 0 }   # バージョン情報なし → 未検出
+$fv = $null
+if (-not [Version]::TryParse($raw, [ref]$fv)) { exit 0 }
 if ($fv -lt [Version]"${String(r.minVersion).replace(/"/g, '""')}") { exit 0 }`;
       }
       return `# ${p}\\${f} の存在を検出
-if (-not (Test-Path -LiteralPath "${p}\\${f}")) { exit 0 }`;
+${expand}
+if (-not (Test-Path -LiteralPath (Join-Path $path "${f}"))) { exit 0 }`;
     }
 
     if (r.type === "registry") {
       const k = String(r.keyPath || "").replace(/"/g, '""');
-      const psPath = k.replace(/^HKEY_LOCAL_MACHINE/i, "HKLM:")
-                     .replace(/^HKLM/i, "HKLM:")
-                     .replace(/^HKEY_CURRENT_USER/i, "HKCU:")
-                     .replace(/^HKCU/i, "HKCU:");
+      const psPath = psRegPath(k);
       if (r.valueName) {
         const vn = String(r.valueName).replace(/"/g, '""');
         return `# レジストリ値 ${k}\\${r.valueName} を検出
 $k = "${psPath}"
-if (-not (Test-Path $k)) { exit 0 }
-$v = (Get-ItemProperty -Path $k -Name "${vn}" -ErrorAction SilentlyContinue).${r.valueName}
+if (-not (Test-Path -LiteralPath $k)) { exit 0 }
+$v = (Get-ItemProperty -LiteralPath $k -Name "${vn}" -ErrorAction SilentlyContinue).${r.valueName}
 if ($null -eq $v) { exit 0 }`;
       }
       return `# レジストリキー ${k} の存在を検出
-if (-not (Test-Path "${psPath}")) { exit 0 }`;
+if (-not (Test-Path -LiteralPath "${psPath}")) { exit 0 }`;
     }
 
     return "";
@@ -160,7 +200,7 @@ exit 0
 `;
   }
 
-  return { RULE_TYPES, GUID_RE, HK_ROOTS, validateRule, validate, psCheck, buildScript };
+  return { RULE_TYPES, GUID_RE, HK_ROOTS, PS_DRIVE, VER_RE, psRegPath, validateRule, validate, psCheck, buildScript };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = W3D;
