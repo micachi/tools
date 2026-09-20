@@ -38,7 +38,7 @@
 
   function fillResources() {
     $("res").innerHTML = IGR.RESOURCES.map((r) =>
-      `<option value="${esc(r.path)}">${esc(r.label)}　<${esc(r.path)}></option>`).join("");
+      `<option value="${esc(r.path)}">${esc(r.label)} <${esc(r.path)}></option>`).join("");
   }
 
   function fillFields() {

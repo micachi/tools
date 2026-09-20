@@ -91,12 +91,12 @@
   function showFg() {
     $("fgHex").value = toHex(fg);
     const h = rgbToHsl(fg);
-    $("fgOut").textContent = `RGB ${fg.r} ${fg.g} ${fg.b} ／ HSL ${h.h.toFixed(0)}° ${h.s.toFixed(0)}% ${h.l.toFixed(0)}%`;
+    $("fgOut").textContent = `RGB ${fg.r} ${fg.g} ${fg.b} / HSL ${h.h.toFixed(0)}° ${h.s.toFixed(0)}% ${h.l.toFixed(0)}%`;
   }
   function showBg() {
     $("bgHex").value = toHex(bg);
     const h = rgbToHsl(bg);
-    $("bgOut").textContent = `RGB ${bg.r} ${bg.g} ${bg.b} ／ HSL ${h.h.toFixed(0)}° ${h.s.toFixed(0)}% ${h.l.toFixed(0)}%`;
+    $("bgOut").textContent = `RGB ${bg.r} ${bg.g} ${bg.b} / HSL ${h.h.toFixed(0)}° ${h.s.toFixed(0)}% ${h.l.toFixed(0)}%`;
   }
 
   function sync() { apply(); showFg(); showBg(); }

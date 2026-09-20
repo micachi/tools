@@ -124,7 +124,7 @@
     }
     const obj = IJS.buildLayout(pins, applyOnce);
     const ok = IJS.roundTripOk(obj);
-    setStatus(ok, `<b>${ok ? L.pass : L.rtErr}</b>　<span class="sub">${L.pinCount(obj.pinnedList.length)} ／ applyOnce=${obj.applyOnce}</span>`);
+    setStatus(ok, `<b>${ok ? L.pass : L.rtErr}</b> <span class="sub">${L.pinCount(obj.pinnedList.length)} / applyOnce=${obj.applyOnce}</span>`);
     if (ok) {
       syncing = true;
       $("out").value = IJS.toJson(obj);
@@ -157,7 +157,7 @@
     if (errs.length) {
       setStatus(false, `<b>${L.importedErr(errs.length)}</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
     } else {
-      setStatus(true, `<b>${L.imported}</b>　<span class="sub">${L.pinCount(pins.length)} ／ applyOnce=${r.applyOnce}</span>${warn}`);
+      setStatus(true, `<b>${L.imported}</b> <span class="sub">${L.pinCount(pins.length)} / applyOnce=${r.applyOnce}</span>${warn}`);
     }
   }
 

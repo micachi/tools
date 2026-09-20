@@ -79,7 +79,7 @@
     if (!isFinite(n)) { st.innerHTML = `<span class="sub">${L.needDays}</span>`; return; }
     const r = new Date(base.getTime() + n * DAY);
     st.innerHTML = `<b style="color:var(--acc);font-size:1.1rem">${jp(r)}</b> ` +
-      `<span class="sub">／ ${iso(r)} ／ ${n >= 0 ? L.after(n) : L.before(-n)}</span>`;
+      `<span class="sub">/ ${iso(r)} /  ${n >= 0 ? L.after(n) : L.before(-n)}</span>`;
   }
 
   function calcDiff() {
@@ -100,7 +100,7 @@
         <div class="stat"><span class="v">${num(biz)}</span><span class="k">${L.kBiz}</span></div>
       </div>
       <p class="sub" style="margin:12px 0 0">
-        ${jp(s)} → ${jp(e)}　<span class="ok">${days >= 0 ? L.forward(days) : L.back(-days)}</span>
+        ${jp(s)} → ${jp(e)} <span class="ok">${days >= 0 ? L.forward(days) : L.back(-days)}</span>
       </p>
       <p class="sub" style="margin:6px 0 0">${L.bizNote}</p>`;
   }

@@ -23,7 +23,7 @@
     en: {
       veryStrong: "very strong", strong: "strong", ok: "moderate", weak: "weak", bad: "unacceptable",
       bitsLabel: (b, s) => `${b} bit (${s})`,
-      poolInfo: (n) => `Character pool: ${n} ／ change settings and press “Generate” to apply`,
+      poolInfo: (n) => `Character pool: ${n} /  change settings and press “Generate” to apply`,
       noClass: "Select at least one character class",
       copy: "Copy", done: "✓ Done", copyFail: "Copy failed",
       generated: (n, b) => `✓ Generated ${n} password(s) (est. ${b} bit)`,

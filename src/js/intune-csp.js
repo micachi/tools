@@ -44,7 +44,7 @@
   function fillCsp(csp, offset) {
     const sel = $("csp");
     sel.innerHTML = nodes.map((n) =>
-      `<option value="${esc(n.csp)}">${esc(n.csp)}　(${n.count})</option>`).join("");
+      `<option value="${esc(n.csp)}">${esc(n.csp)} (${n.count})</option>`).join("");
     if (csp) sel.value = csp;
     fillOffsets(offset);
   }
@@ -59,7 +59,7 @@
         const key = o + "|" + e.prop;
         if (seen.has(key)) continue;
         seen.add(key);
-        opts.push({ v: o, label: `${e.prop}　—　${o}` });
+        opts.push({ v: o, label: `${e.prop} — ${o}` });
       }
     }
     opts.sort((a, b) => a.label.localeCompare(b.label, "en"));
@@ -131,7 +131,7 @@
   });
 
   // 初期状態
-  $("stats").textContent = L.hits(ICS.MAP.length, ICS.MAP.length) + `　·　${nodes.length} CSP nodes`;
+  $("stats").textContent = L.hits(ICS.MAP.length, ICS.MAP.length) + ` · ${nodes.length} CSP nodes`;
   fillCsp(nodes[0] ? nodes[0].csp : null);
   renderResults(ICS.MAP.slice(0, 20), ICS.MAP.length);
 })();

@@ -32,7 +32,7 @@
       up: "Move up", down: "Move down", del: "Delete",
       none: "Nothing yet. Use the buttons above, or paste JSON below.",
       errCount: (n) => `✕ ${n} validation error(s)`, pass: "✓ Validation passed", rtErr: "✕ Round-trip mismatch",
-      stat: (b, f, d) => `${b} bookmarks ／ ${f} folders ／ max ${d} level(s) deep`,
+      stat: (b, f, d) => `${b} bookmarks /  ${f} folders /  max ${d} level(s) deep`,
       empty: "✕ JSON is empty", impFail: "✕ Import failed",
       keepTree: "※ Your existing tree is kept. Fix the JSON and it will import again.",
       warn: "Warning", importedErr: (n) => `⚠ Imported but ${n} validation error(s)`, imported: "✓ Imported from JSON",
@@ -129,7 +129,7 @@
     const arr = MBK.build(tree, top, target);
     const ok = MBK.roundTripOk(arr);
     const st = MBK.stats(tree);
-    setStatus(ok, `<b>${ok ? L.pass : L.rtErr}</b>　<span class="sub">${L.stat(st.bookmarks, st.folders, st.maxDepth)}</span>`);
+    setStatus(ok, `<b>${ok ? L.pass : L.rtErr}</b> <span class="sub">${L.stat(st.bookmarks, st.folders, st.maxDepth)}</span>`);
     if (ok) {
       syncing = true;
       $("out").value = MBK.toJson(arr);
@@ -162,7 +162,7 @@
     if (errs.length) {
       setStatus(false, `<b>${L.importedErr(errs.length)}</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
     } else {
-      setStatus(true, `<b>${L.imported}</b>　<span class="sub">${L.stat(st.bookmarks, st.folders, st.maxDepth)}</span>${warn}`);
+      setStatus(true, `<b>${L.imported}</b> <span class="sub">${L.stat(st.bookmarks, st.folders, st.maxDepth)}</span>${warn}`);
     }
   }
 

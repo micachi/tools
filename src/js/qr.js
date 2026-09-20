@@ -14,9 +14,9 @@
     },
     en: {
       empty: "Enter text or a URL",
-      info: (ver, n, ecl, len) => `Version ${ver} ／ ${n}×${n} modules ／ EC level ${ecl} ／ ${len} characters`,
+      info: (ver, n, ecl, len) => `Version ${ver} / ${n}×${n} modules / EC level ${ecl} / ${len} characters`,
       tooMuch: "⚠ Too much data",
-      tooMuchHint: "Fix: lower the error-correction level (toward L) ／ shorten the text ／ use a shorter URL",
+      tooMuchHint: "Fix: lower the error-correction level (toward L) / shorten the text ／ use a shorter URL",
       unexpected: "⚠ Unexpected error",
       pngFail: "⚠ PNG conversion failed",
     },

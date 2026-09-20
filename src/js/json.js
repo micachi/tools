@@ -17,7 +17,7 @@
       invalid: "✕ Invalid JSON",
       at: (line, col) => `　near line ${line}, column ${col}`,
       valid: "✓ Valid JSON",
-      counts: (s, kb) => `${s.keys} keys ／ ${s.objects} objects ／ ${s.arrays} arrays ／ ${s.strings} strings ／ ${s.numbers} numbers ／ max depth ${s.depth} ／ ${kb} KB out`,
+      counts: (s, kb) => `${s.keys} keys / ${s.objects} objects / ${s.arrays} arrays / ${s.strings} strings / ${s.numbers} numbers / max depth ${s.depth} / ${kb} KB out`,
       copied: "✓ Copied", copyBtn: "Copy output",
       sample: '{"name":"example","items":[1,2,3],"nested":{"a":true},"note":"\\u65e5\\u672c\\u8a9e"}',
     },
@@ -71,7 +71,7 @@
       $("copy").disabled = true;
       st.innerHTML = `<span class="err">${L.invalid}</span>` +
         (loc ? `<span class="sub">${L.at(loc.line, loc.col)} — ${e.message.replace(/\n.*/s, "")}</span>`
-            : `<span class="sub">　${e.message}</span>`);
+            : `<span class="sub"> ${e.message}</span>`);
       return;
     }
 

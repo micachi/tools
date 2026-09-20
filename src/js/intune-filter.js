@@ -191,7 +191,7 @@
     const errs = IFT.validateTree(root);
     const syntax = IFT.buildTree(root);
     if (errs.length) { showErr(errs); }
-    else setStatus(true, `<b>${L.pass}</b>　<span class="sub">${L.chars(syntax.length, IFT.LIMIT_CHARS)}</span>`);
+    else setStatus(true, `<b>${L.pass}</b> <span class="sub">${L.chars(syntax.length, IFT.LIMIT_CHARS)}</span>`);
     syncing = true;
     $("out").value = syntax;
     syncing = false;
@@ -218,7 +218,7 @@
       renderRows();
       const errs = IFT.validateTree(root);
       if (errs.length) showErr(errs);
-      else setStatus(true, `<b>${L.imported}</b>　<span class="sub">${L.chars(IFT.buildTree(root).length, IFT.LIMIT_CHARS)}</span>`);
+      else setStatus(true, `<b>${L.imported}</b> <span class="sub">${L.chars(IFT.buildTree(root).length, IFT.LIMIT_CHARS)}</span>`);
     } catch (e) {
       setStatus(false, `<b>${L.impFail}</b><ul><li>${esc(e.message || e)}</li></ul><span class="sub">${L.keep}</span>`);
     }
