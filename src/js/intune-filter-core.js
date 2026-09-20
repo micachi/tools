@@ -22,8 +22,8 @@ const IFT = (() => {
     ne:          { sym: "-ne",          label: EN ? "Not equals" : "等しくない" },
     gt:          { sym: "-gt",          label: EN ? "Greater than" : "より大きい" },
     lt:          { sym: "-lt",          label: EN ? "Less than" : "より小さい" },
-    ge:          { sym: "-ge",          label: EN ? ">= (以上)" : "以上" },
-    le:          { sym: "-le",          label: EN ? "<= (以下)" : "以下" },
+    ge:          { sym: "-ge",          label: EN ? "Greater or equal" : "以上" },
+    le:          { sym: "-le",          label: EN ? "Less or equal" : "以下" },
     startsWith:  { sym: "-startsWith",  label: EN ? "Starts with" : "で始まる" },
     contains:    { sym: "-contains",    label: EN ? "Contains" : "を含む" },
     notContains: { sym: "-notContains", label: EN ? "Does not contain" : "を含まない" },
@@ -43,7 +43,7 @@ const IFT = (() => {
       values: ["amd64", "x86", "arm64", "x64", "unknown"],
       valueJa: { amd64: "AMD64（64bit）", x86: "32bit", arm64: "ARM64", x64: "x64（Intel / Apple）", unknown: "不明" },
       platforms: "macOS / Windows",
-      note: EN ? "Windows: amd64/x86/arm64/unknown ・ macOS: x64/arm64/unknown. Enrollment scenarios not yet supported."
+      note: EN ? "Windows: amd64/x86/arm64/unknown; macOS: x64/arm64/unknown. Enrollment scenarios not yet supported."
               : "Windows: amd64/x86/arm64/unknown ／ macOS: x64/arm64/unknown。登録（エンロール）シナリオは未対応",
     },
     deviceCategory: { label: "Device Category", ja: "デバイス カテゴリ", type: "string", ops: STRING_OPS, platforms: "Android / iOS / macOS / Windows" },
@@ -196,27 +196,22 @@ const IFT = (() => {
   }
 
   /* ── 検証 ───────────────────────────────────────────── */
-  function validate(rules) {
+  /** 1条件の検証。at は表示用の位置ラベル（条件1 / 条件2.1 など） */
+  function checkRule(r, at) {
     const errs = [];
-    if (!Array.isArray(rules) || rules.length === 0) {
-      errs.push(EN ? "No conditions" : "条件が1つもありません");
-      return errs;
-    }
-    rules.forEach((r, i) => {
-      const at = EN ? `Condition ${i + 1}` : `条件${i + 1}`;
-      if (!["device", "app"].includes(r.entity)) { errs.push(`${at}: entity が不正です (${r.entity})`); return; }
+      if (!["device", "app"].includes(r.entity)) { errs.push(`${at}: entity が不正です (${r.entity})`); return errs; }
       const def = propDef(r.entity, r.prop);
       if (!def) {
         errs.push(`${at}: ${r.entity}.${r.prop} は既知のプロパティではありません`);
-        return;
+        return errs;
       }
-      if (!OPS[r.op]) { errs.push(`${at}: 未知の演算子 -${r.op}`); return; }
+      if (!OPS[r.op]) { errs.push(`${at}: 未知の演算子 -${r.op}`); return errs; }
       if (!def.ops.includes(r.op)) {
         errs.push(`${at}: ${r.entity}.${r.prop} に -${r.op} は使えません（可: ${def.ops.map((o) => "-" + o).join(", ")}）`);
       }
       const vals = (r.values || []).map((v) => String(v).trim());
       const clean = vals.filter((v) => v !== "");
-      if (clean.length === 0) { errs.push(`${at}: 値を入力してください`); return; }
+      if (clean.length === 0) { errs.push(`${at}: 値を入力してください`); return errs; }
 
       const isNull = clean.every((v) => /^(null|\$null)$/i.test(v));
       if (isNull && !["eq", "ne"].includes(r.op)) {
@@ -248,6 +243,17 @@ const IFT = (() => {
           errs.push(`${at}: バージョン比較は 10.0.22000.1000 のような数値形式が必要です`);
         }
       }
+    return errs;
+  }
+
+  function validate(rules) {
+    const errs = [];
+    if (!Array.isArray(rules) || rules.length === 0) {
+      errs.push(EN ? "No conditions" : "条件が1つもありません");
+      return errs;
+    }
+    rules.forEach((r, i) => {
+      errs.push(...checkRule(r, EN ? `Condition ${i + 1}` : `条件${i + 1}`));
     });
 
     const syntax = build(rules);
@@ -310,8 +316,186 @@ const IFT = (() => {
     return rules;
   }
 
+  /* ── ツリーモデル（入れ子対応） ───────────────────────
+     group = { kind: "group", op: "and"|"or", children: [node...] }
+     rule  = { kind: "rule", entity, prop, op, values[] }
+     ルートは常に group。ルート自体は括弧で囲まない（平坦時は build() と同一の出力） */
+  function group(op, children) {
+    return { kind: "group", op: op === "or" ? "or" : "and", children: children || [] };
+  }
+  function rule(entity, prop, op, values) {
+    return { kind: "rule", entity: entity || "device", prop: prop || "osVersion", op: op || "eq", values: values || [] };
+  }
+  const isGroup = (n) => !!n && n.kind === "group";
+
+  function renderNode(n) {
+    if (!isGroup(n)) return renderRule(n);
+    const inner = (n.children || []).map(renderNode).join(` ${n.op} `);
+    return `(${inner})`;
+  }
+
+  /** ツリー → 構文文字列（ルートは括弧で囲まない） */
+  function buildTree(root) {
+    if (!isGroup(root)) return renderNode(root);
+    return (root.children || []).map(renderNode).join(` ${root.op} `);
+  }
+
+  /** 旧・平坦配列（条件ごとに join）→ ツリー。and は or より強く結合する前提 */
+  function flatToTree(rules) {
+    const runs = [];
+    let cur = [];
+    (rules || []).forEach((r, i) => {
+      if (i > 0 && (r.join || "and") === "or") { runs.push(cur); cur = []; }
+      cur.push(rule(r.entity, r.prop, r.op, r.values));
+    });
+    if (cur.length) runs.push(cur);
+    if (runs.length <= 1) return group("and", runs[0] || []);
+    return group("or", runs.map((run) => (run.length === 1 ? run[0] : group("and", run))));
+  }
+
+  /** 深さ：ルールのみ=1 / 入れ子グループを含めば 2 以上 */
+  function treeDepth(n) {
+    if (!isGroup(n)) return 0;
+    let m = 1;
+    (n.children || []).forEach((c) => { m = Math.max(m, 1 + treeDepth(c)); });
+    return m;
+  }
+
+  /** 深さ1のツリー → 旧・平坦配列（入れ子があれば null） */
+  function treeToFlat(root) {
+    if (!isGroup(root) || treeDepth(root) > 1) return null;
+    return (root.children || []).map((c) => ({
+      entity: c.entity, prop: c.prop, op: c.op, values: c.values, join: root.op,
+    }));
+  }
+
+  function validateTree(root) {
+    const errs = [];
+    if (!isGroup(root)) {
+      errs.push(EN ? "Root must be a group" : "ルートはグループである必要があります");
+      return errs;
+    }
+    (function walk(g, path) {
+      if (!["and", "or"].includes(g.op)) {
+        errs.push(`${path}: グループの結合子は and / or のいずれかです`);
+      }
+      if (!g.children || !g.children.length) {
+        errs.push(`${path}: 条件が入っていません`);
+        return;
+      }
+      g.children.forEach((c, k) => {
+        const pp = path ? `${path}.${k + 1}` : `${k + 1}`;
+        if (isGroup(c)) {
+          walk(c, pp);
+        } else {
+          errs.push(...checkRule(c, EN ? `Condition ${pp}` : `条件${pp}`));
+        }
+      });
+    })(root, "");
+    if (treeDepth(root) > 3) {
+      errs.push(EN ? `Filter is nested too deeply (${treeDepth(root)} levels, max 3)`
+                  : `入れ子が深すぎます（${treeDepth(root)} 階層、最大 3 階層）`);
+    }
+    const syntax = buildTree(root);
+    if (syntax.length > LIMIT_CHARS) {
+      errs.push(EN ? `Filter exceeds ${LIMIT_CHARS} characters (${syntax.length})`
+                  : `フィルターが ${LIMIT_CHARS} 文字を超えています（${syntax.length} 文字）`);
+    }
+    return errs;
+  }
+
+  /* ── 再帰下降パーサ（入れ子対応） ──────────────────── */
+  const RULE_BODY = /^([a-zA-Z]+)\.([a-zA-Z]+)\s+(-?[a-zA-Z]+)\s+("(?:[^"\\]|\\.)*"|\[[^\]]*\]|[^\s()]+)/;
+
+  function parseValue(raw) {
+    const v = String(raw).trim();
+    if (v.startsWith("[")) {
+      return v.slice(1, -1).split(",").map((s) => s.trim().replace(/^"|"$/g, "")).filter((s) => s !== "");
+    }
+    if (v.startsWith('"')) return [v.slice(1, -1).replace(/\\"/g, '"')];
+    return [v];
+  }
+
+  /** 構文文字列 → ツリー。入れ子 and/or を構造化して取り込む */
+  function parseTree(text) {
+    if (!text || !text.trim()) throw new Error(EN ? "Empty rule" : "ルールが空です");
+    const s = String(text);
+    let i = 0;
+    const ws = () => { while (i < s.length && /\s/.test(s[i])) i++; };
+    const fail = (m) => { throw new Error(m); };
+
+    function parseGroup(top) {
+      const kids = [];
+      let op = null;
+      let prefix = false;
+      ws();
+      // 接頭辞形 ( and (A) (B) ) にも対応（ルール構文エディターで見かける書式）
+      const pm = /^(and|or)\b(?=\s)/i.exec(s.slice(i));
+      if (pm) { op = pm[1].toLowerCase(); prefix = true; i += pm[0].length; }
+      for (;;) {
+        ws();
+        if (i >= s.length) break;
+        if (s[i] === ")") { if (top) fail(EN ? "Unbalanced parentheses" : "括弧が多すぎます"); break; }
+        kids.push(parseItem());
+        ws();
+        if (i >= s.length || s[i] === ")") break;
+        const jm = /^(and|or)\b/i.exec(s.slice(i));
+        if (!jm) {
+          if (prefix) continue;             // 接頭辞形では結合詞を省略できる
+          fail(EN ? `Expected 'and' / 'or' at position ${i + 1}` : `${i + 1} 文字目に and / or が必要です`);
+        }
+        const j = jm[1].toLowerCase();
+        if (op === null) op = j;
+        else if (op !== j) {
+          fail(EN ? `Cannot mix '${op}' and '${j}' in one group (wrap with parentheses)`
+                 : `同じグループ内で ${op} と ${j} を混在できません（括弧でグループ化してください）`);
+        }
+        i += jm[0].length;
+      }
+      if (!kids.length) fail(EN ? "Empty group" : "空のグループです");
+      return group(op || "and", kids);
+    }
+
+    function parseItem() {
+      if (s[i] !== "(") fail(EN ? `Expected '(' at position ${i + 1}` : `${i + 1} 文字目に ( が必要です`);
+      i++;
+      ws();
+      const m = RULE_BODY.exec(s.slice(i));
+      if (m) {
+        const bare = m[3].replace(/^-/, "");
+        const op = SYM2KEY["-" + bare.toLowerCase()];
+        if (!op) fail(EN ? `Unknown operator -${bare}` : `未知の演算子 -${bare} です`);
+        i += m[0].length;
+        ws();
+        if (s[i] !== ")") fail(EN ? "Missing ')' after the rule value" : "値の後に ) がありません");
+        i++;
+        return rule(m[1].toLowerCase(), m[2], op, parseValue(m[4]));
+      }
+      const g = parseGroup(false);
+      ws();
+      if (s[i] !== ")") fail(EN ? "Missing ')' to close the nested group" : "入れ子グループの閉じ ) がありません");
+      i++;
+      return g;
+    }
+
+    const root = parseGroup(true);
+    ws();
+    if (i < s.length) fail(EN ? `Unexpected input at position ${i + 1}` : `${i + 1} 文字目以降が読み込めません`);
+    return root;
+  }
+
+
   /* ── プリセット（実務でよく作る形） ──────────────────── */
   const PRESETS = [
+    { name: EN ? "Nested: corporate Windows, Dell or Lenovo" : "入れ子: 法人所有の Windows（Dell / Lenovo のみ）", tree:
+      group("and", [
+        rule("device", "deviceOwnership", "eq", ["Corporate"]),
+        rule("device", "osVersion", "startsWith", ["Windows"]),
+        group("or", [
+          rule("device", "manufacturer", "eq", ["Dell"]),
+          rule("device", "manufacturer", "eq", ["Lenovo"]),
+        ]),
+      ]) },
     { name: EN ? "Corporate-owned Windows only" : "法人所有の Windows のみ", rules: [
       { entity: "device", prop: "deviceOwnership", op: "eq", values: ["Corporate"], join: "and" },
       { entity: "device", prop: "osVersion", op: "startsWith", values: ["Windows"], join: "and" },
@@ -356,6 +540,7 @@ const IFT = (() => {
     OPS, PROPS, DEVICE_PROPS, APP_PROPS, PRESETS, LIMIT_CHARS,
     propDef, propLabel, valueLabel, enumPropsMissingJa, hasNesting,
     renderRule, build, validate, parse,
+    group, rule, isGroup, buildTree, parseTree, validateTree, flatToTree, treeToFlat, treeDepth,
   };
 })();
 

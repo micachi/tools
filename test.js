@@ -744,9 +744,10 @@ console.log("\n=== 21. Intune 割り当てフィルター ルール生成 ===");
   ok("形式外のパースは例外", (() => { try { IFT.parse("hello world"); return false; } catch { return true; } })());
 
   /* --- プリセットが全て検証を通ること --- */
-  const badPreset = IFT.PRESETS.filter((p) => IFT.validate(p.rules).length > 0);
+  const presetToTree = (p) => p.tree || IFT.flatToTree(p.rules);
+  const badPreset = IFT.PRESETS.filter((p) => IFT.validateTree(presetToTree(p)).length > 0);
   ok(`全プリセット（${IFT.PRESETS.length} 個）が検証を通過`, badPreset.length === 0,
-    badPreset.map((p) => p.name + ": " + IFT.validate(p.rules).join("|")).join(" / "));
+    badPreset.map((p) => p.name + ": " + IFT.validateTree(presetToTree(p)).join("|")).join(" / "));
 
   /* --- 日本語表示名・列挙値ラベル（属性名をそのまま見せない） --- */
   ok("プロパティに日本語名がある", IFT.propLabel("device", "manufacturer") === "メーカー",
@@ -799,6 +800,85 @@ console.log("\n=== 21. Intune 割り当てフィルター ルール生成 ===");
       if (s !== s2) return false;
     }
     return true;
+  })());
+
+  /* --- 既存ルール取り込み（パース）の安全性 --- */
+  ok("入れ子は黙って平坦化せず拒否（or→and の論理反転回帰）",
+    (() => { try { IFT.parse("(or (device.deviceName -eq \"A\") (device.manufacturer -eq \"Dell\"))"); return false; } catch (e) { return /入れ子|Nested/.test(e.message); } })());
+  ok("hasNesting が入れ子を検出する", IFT.hasNesting("(a (b))") && !IFT.hasNesting("(a) (b)"));
+  ok("値に ) を含んでも壊れない", IFT.parse("(device.deviceName -contains \"a)b\")")[0].values[0] === "a)b");
+  ok("引用符のエスケープが往復する",
+    IFT.parse("(device.deviceName -eq \"say \\\"hi\\\"\")")[0].values[0] === "say \"hi\"");
+  ok("演算子表記を正規化（-STARTSWITH → startsWith）",
+    IFT.parse("(device.deviceName -STARTSWITH \"PC\")")[0].op === "startsWith");
+  ok("-NOTCONTAINS も正規化", IFT.parse("(device.model -NOTCONTAINS \"X\")")[0].op === "notContains");
+  ok("未知の演算子は黙さず例外", (() => { try { IFT.parse("(device.deviceName -foo \"x\")"); return false; } catch { return true; } })());
+  ok("往復（build→parse→build）が一致する（fuzz 64 パターン）", (() => {
+    const props = [
+      ["device", "manufacturer", "eq", ["Dell"]],
+      ["device", "operatingSystemVersion", "ge", ["10.0.22000"]],
+      ["device", "operatingSystemSKU", "in", ["Enterprise", "Education"]],
+      ["device", "isRooted", "ne", ["True"]],
+      ["device", "deviceName", "startsWith", ["PC"]],
+      ["app", "appVersion", "contains", ["1."]],
+    ];
+    for (let i = 0; i < 64; i++) {
+      const rules = props.slice(0, 1 + (i % props.length)).map(([entity, prop, op, values], k) =>
+        ({ entity, prop, op, values, join: k % 2 ? "or" : "and" }));
+      const s = IFT.build(rules);
+      if (s !== IFT.build(IFT.parse(s))) return false;
+    }
+    return true;
+  })());
+
+  /* --- ツリー（入れ子）編集 --- */
+  const T1 = IFT.group("and", [
+    IFT.rule("device", "deviceOwnership", "eq", ["Corporate"]),
+    IFT.group("or", [
+      IFT.rule("device", "manufacturer", "eq", ["Dell"]),
+      IFT.rule("device", "model", "startsWith", ["OptiPlex"]),
+    ]),
+  ]);
+  ok("buildTree が入れ子を括弧で表現する",
+    IFT.buildTree(T1) === "(device.deviceOwnership -eq \"Corporate\") and ((device.manufacturer -eq \"Dell\") or (device.model -startsWith \"OptiPlex\"))",
+    IFT.buildTree(T1));
+  ok("入れ子の往復（buildTree → parseTree → buildTree）が一致",
+    IFT.buildTree(IFT.parseTree(IFT.buildTree(T1))) === IFT.buildTree(T1));
+  ok("深さが正しく取れる", IFT.treeDepth(T1) === 2);
+  ok("平坦なツリーは build() と同一出力（後方互換）", (() => {
+    const flat = [{ entity: "device", prop: "manufacturer", op: "eq", values: ["Dell"], join: "and" },
+                 { entity: "device", prop: "model", op: "ne", values: ["XPS"], join: "or" }];
+    return IFT.buildTree(IFT.flatToTree(flat)) === IFT.build(flat);
+  })());
+  ok("flatToTree は or で区切って優先度を構造化", (() => {
+    const flat = [
+      { entity: "device", prop: "a", op: "eq", values: ["1"], join: "and" },
+      { entity: "device", prop: "b", op: "eq", values: ["2"], join: "and" },
+      { entity: "device", prop: "c", op: "eq", values: ["3"], join: "or" },
+    ];
+    return IFT.buildTree(IFT.flatToTree(flat)) === "((device.a -eq \"1\") and (device.b -eq \"2\")) or (device.c -eq \"3\")";
+  })(), IFT.buildTree(IFT.flatToTree([
+    { entity: "device", prop: "a", op: "eq", values: ["1"], join: "and" },
+    { entity: "device", prop: "b", op: "eq", values: ["2"], join: "and" },
+    { entity: "device", prop: "c", op: "eq", values: ["3"], join: "or" }])));
+  ok("入れ子内の不正条件も検証される", (() => {
+    const t = IFT.group("and", [IFT.group("or", [IFT.rule("device", "notAProperty", "eq", ["x"])])]);
+    return IFT.validateTree(t).some((e) => /notAProperty/.test(e));
+  })());
+  ok("空グループを検出", IFT.validateTree(IFT.group("and", [])).length > 0);
+  ok("入れ子すぎたら弾く（全体で 3 階層まで）", (() => {
+    const deep = IFT.group("and", [IFT.group("or", [IFT.group("and", [IFT.group("or", [IFT.rule("device", "a", "eq", ["1"])])])])]);
+    return IFT.validateTree(deep).some((e) => /入れ子|階層|deep/i.test(e));
+  })(), JSON.stringify(IFT.validateTree(IFT.group("and", [IFT.group("or", [IFT.group("and", [IFT.group("or", [IFT.rule("device", "a", "eq", ["1"])])])])]))));
+  ok("parseTree は同一グループ内の and/or 混在を拒否（優先度の解釈で意味が変わるため）",
+    (() => { try { IFT.parseTree("(device.a -eq \"1\") and (device.b -eq \"2\") or (device.c -eq \"3\")"); return false; } catch (e) { return /混在|mix/i.test(e.message); } })());
+  ok("混在フラットは flatToTree で意味保持（暗黙の優先度を明示）", (() => {
+    const flat = IFT.parse("(device.a -eq \"1\") and (device.b -eq \"2\") or (device.c -eq \"3\")");
+    return IFT.buildTree(IFT.flatToTree(flat)) === "((device.a -eq \"1\") and (device.b -eq \"2\")) or (device.c -eq \"3\")";
+  })());
+  ok("入れ子プリセットが検証を通過し括弧を含む", (() => {
+    const q = IFT.PRESETS.find((x) => x.tree);
+    return !!q && IFT.validateTree(q.tree).length === 0 && IFT.buildTree(q.tree).includes(") and (");
   })());
 
   /* --- ページ --- */
@@ -870,6 +950,12 @@ console.log("\n=== 22. Win32 検出ルール生成 ===");
   ok("エラーメッセージ内の例が HKLM\\Software の形を保つ",
     W3D.validateRule({ type: "registry", keyPath: "HKLM\\SOFTWARE" }).join("").includes("HKLM\\Software\\Vendor\\App"),
     W3D.validateRule({ type: "registry", keyPath: "HKLM\\SOFTWARE" }).join(""));
+  ok("script 型（項目なし）を受け付けない — 空チェックで誤検出するため",
+    W3D.validate([{ type: "script" }]).length > 0 && !W3D.RULE_TYPES.script,
+    JSON.stringify(W3D.validate([{ type: "script" }])));
+  ok("エラーメッセージ内の例が HKLM\\Software の形を保つ",
+    W3D.validateRule({ type: "registry", keyPath: "HKLM\\SOFTWARE" }).join("").includes("HKLM\\Software\\Vendor\\App"),
+    W3D.validateRule({ type: "registry", keyPath: "HKLM\\SOFTWARE" }).join(""));
 
   const script = W3D.buildScript([
     msi,
@@ -921,6 +1007,10 @@ console.log("\n=== 23. OMA-URI / Windows CSP 対応表 ===");
   ok("検証: 正しい OMA-URI は通る",
     ICS.validateUri("./Device/Vendor/MSFT/Policy/Config/Defender/AttackSurfaceReductionRules").length === 0);
   ok("プレースホルダ {AADTenantId} を保持", ICS.search("AADTenantId").length === 11, String(ICS.search("AADTenantId").length));
+  ok("スコープ名がロケール分岐を持つ（EN 用に英語文字列を用意）",
+    /Vendor \(Device \/ User\)/.test(fs.readFileSync(path.join(__dirname, "src/js/intune-csp-core.js"), "utf8")) &&
+      ICS.scopeOf("./Vendor/MSFT/Policy") === "Vendor (User/Device 両対応)",
+    ICS.scopeOf("./Vendor/MSFT/Policy"));
   ok("スコープ名がロケール分岐を持つ（EN 用に英語文字列を用意）",
     /Vendor \(Device \/ User\)/.test(ioRead("src/js/intune-csp-core.js")) &&
     ICS.scopeOf("./Vendor/MSFT/Policy") === "Vendor (User/Device 両対応)",

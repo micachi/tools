@@ -11,13 +11,14 @@
     <div style="align-self:flex-end"><button id="add" class="primary">＋ Add condition</button></div>
     <div style="align-self:flex-end"><button id="clear">Clear all</button></div>
   </div>
+  <p class="sub" style="margin:0 0 10px;font-size:.82rem">“＋ Add group” creates a <b>nested</b> set of conditions wrapped in parentheses. The top-left selector changes how each group joins its children.</p>
   <div id="rows"></div>
 </section>
 
 <section class="panel">
   <div id="validation" class="valid"></div>
   <div class="field" style="margin-top:12px">
-    <label for="out">Rule syntax　<span class="sub">— editable. Paste an existing rule to load it into the conditions above</span></label>
+    <label for="out">Rule syntax <span class="sub">— editable. Paste an existing rule to load it into the conditions above</span></label>
     <textarea id="out" class="mono" style="min-height:150px" spellcheck="false"></textarea>
   </div>
   <button id="cp" class="primary">Copy rule</button>
@@ -25,10 +26,10 @@
 
 <section class="panel">
   <h2 style="font-size:1rem;margin:0 0 10px">Syntax</h2>
-  <p style="font-size:.88rem;margin:0 0 8px"><code class="mono">([entity].[property name] [operation] [value])</code>　— similar in shape to Entra dynamic groups.</p>
+  <p style="font-size:.88rem;margin:0 0 8px"><code class="mono">([entity].[property name] [operation] [value])</code> — similar in shape to Entra dynamic groups.</p>
   <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
     <li>Properties, operators and values are <b>case insensitive</b></li>
-    <li>Parentheses and <b>nesting are supported</b> — using nesting disables the basic rule builder, leaving only the rule syntax editor</li>
+    <li>Parentheses and <b>nesting are supported</b> — in Intune itself, using nesting disables the basic rule builder and leaves only the rule syntax editor. <b>Here you can build and edit nesting with groups</b></li>
     <li><code class="mono">Null</code> / <code class="mono">$Null</code> may only be used with <code class="mono">-eq</code> / <code class="mono">-ne</code></li>
     <li>Up to <b>200 filters per tenant</b>, <b>3,072 characters per filter</b></li>
   </ul>

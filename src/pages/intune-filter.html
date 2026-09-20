@@ -11,6 +11,7 @@
     <div style="align-self:flex-end"><button id="add" class="primary">＋ 条件を追加</button></div>
     <div style="align-self:flex-end"><button id="clear">全消去</button></div>
   </div>
+  <p class="sub" style="margin:0 0 10px;font-size:.82rem">「＋ グループ追加」で and / or を括弧でくくった<b>入れ子</b>を作れます。グループごとの結合子は左上のセレクトで変更します。</p>
   <div id="rows"></div>
 </section>
 
@@ -28,7 +29,7 @@
   <p style="font-size:.88rem;margin:0 0 8px"><code class="mono">([entity].[property name] [operation] [value])</code>　— Entra の動的グループに似た形式です。</p>
   <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
     <li>プロパティ・演算子・値は<b>大文字小文字を区別しません</b></li>
-    <li>括弧と<b>入れ子がサポート</b>されます（入れ子を使うと簡易ルールビルダーは無効になり、ルール構文エディターでのみ編集可能）</li>
+    <li>括弧と<b>入れ子がサポート</b>されます（Intune 本体では入れ子を使うと簡易ルールビルダーは無効になり、ルール構文エディターでのみ編集可能。<b>本ツールなら「グループ」で入れ子を作成・編集できます</b>）</li>
     <li><code class="mono">Null</code> / <code class="mono">$Null</code> は <code class="mono">-eq</code> / <code class="mono">-ne</code> でのみ使用可</li>
     <li>テナントあたり <b>200 個まで</b>、1フィルター <b>3,072 文字まで</b></li>
   </ul>

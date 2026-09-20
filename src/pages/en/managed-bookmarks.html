@@ -10,8 +10,8 @@
       <button type="button" class="seg-btn" data-t="chrome" aria-pressed="false">Google Chrome</button>
     </div>
     <p class="sub" style="margin:9px 0 0">
-      Policy: <b class="mono" id="polName">ManagedFavorites</b>　／
-      Windows registry: <b class="mono" id="polWin">SOFTWARE\Policies\Microsoft\Edge</b>　／
+      Policy: <b class="mono" id="polName">ManagedFavorites</b> /
+      Windows registry: <b class="mono" id="polWin">SOFTWARE\Policies\Microsoft\Edge</b> /
       macOS: <b class="mono" id="polMac">com.microsoft.Edge</b>
     </p>
   </div>
@@ -38,7 +38,7 @@
 <section class="panel">
   <div id="validation" class="valid"></div>
   <div class="field" style="margin-top:12px">
-    <label for="out">JSON　<span class="sub">— editable. Paste an existing policy JSON to load it into the tree above</span></label>
+    <label for="out">JSON <span class="sub">— editable. Paste an existing policy JSON to load it into the tree above</span></label>
     <textarea id="out" class="mono" style="min-height:280px" spellcheck="false"></textarea>
   </div>
   <div class="row">
@@ -75,7 +75,7 @@
     <ul style="font-size:.86rem;margin:0;padding-left:20px">
       <li><b>Cannot be used as a "Recommended" policy</b> — mandatory only. Configuring it as a recommended value is <b>unsupported</b></li>
       <li><b>Does not apply to profiles signed in with a Microsoft account</b> — an Edge 116+ restriction. Design for <b>Entra ID joined / WorkProfile</b></li>
-      <li><b>Supported versions</b> — Windows / macOS ≥ 77 ／ Android ≥ 30 ／ iOS ≥ 85</li>
+      <li><b>Supported versions</b> — Windows / macOS ≥ 77 / Android ≥ 30 / iOS ≥ 85</li>
       <li><b>Dynamic policy refresh</b> — supported; applies without waiting for re-login</li>
     </ul>
   </div>
@@ -84,8 +84,8 @@
     <ul style="font-size:.86rem;margin:0;padding-left:20px">
       <li><b>The browser must be managed first</b> — Chrome <b>ignores policies on machines that are not enrolled</b>. Writing the registry key or managed preferences does nothing on its own. Enroll in <b>Chrome Browser Cloud Management</b> or on-premises management (GPO / managed settings) first</li>
       <li><b>Domain join alone is not enough</b> — Chrome applies policies only after it detects a management source. Check <code class="mono">chrome://policy</code> on the client to confirm what actually landed</li>
-      <li><b>Supported versions</b> — Chrome ≥ 37 ／ ChromeOS ≥ 37 ／ Android ≥ 30 ／ iOS ≥ 88</li>
-      <li><b>Dynamic policy refresh</b> — supported ／ per-profile — supported</li>
+      <li><b>Supported versions</b> — Chrome ≥ 37 / ChromeOS ≥ 37 / Android ≥ 30 / iOS ≥ 88</li>
+      <li><b>Dynamic policy refresh</b> — supported / per-profile — supported</li>
       <li><b>Personal Google accounts</b> — management is browser-wide, so the policy can land on personal profiles too. Plan profile separation separately if you need it</li>
     </ul>
   </div>
