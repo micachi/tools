@@ -1,0 +1,82 @@
+<h1>Microsoft Graph (Intune) Query Snippet Builder</h1>
+<p class="lead">Compose <b>Microsoft Graph queries</b> against Intune <code class="mono">deviceManagement</code> resources and get
+three outputs — <b>URL / PowerShell (Graph SDK) / curl</b>. <b>Resource paths and required application permissions follow the official documentation.</b></p>
+
+<section class="panel">
+  <div class="row" style="align-items:flex-end">
+    <div class="field" style="flex:1 1 320px;min-width:260px">
+      <label for="res">Resource</label>
+      <select id="res"></select>
+    </div>
+    <div class="field" style="flex:0 0 130px">
+      <label for="ver">api-version</label>
+      <select id="ver">
+        <option value="v1.0" selected>v1.0</option>
+        <option value="beta">beta</option>
+      </select>
+    </div>
+  </div>
+  <div id="perm" class="sub" style="margin:4px 0 12px"></div>
+
+  <div class="field">
+    <label for="filter">$filter　<span class="sub">— OData syntax, e.g. <code class="mono">operatingSystem eq 'Windows'</code></span></label>
+    <input type="text" id="filter" class="mono" placeholder="operatingSystem eq 'Windows'" spellcheck="false">
+  </div>
+  <div class="row">
+    <div class="field" style="flex:1 1 260px;min-width:220px">
+      <label for="orderby">$orderby　<span class="sub">— e.g. deviceName asc</span></label>
+      <input type="text" id="orderby" class="mono" placeholder="deviceName asc" spellcheck="false">
+    </div>
+    <div class="field" style="flex:0 0 130px">
+      <label for="top">$top</label>
+      <input type="number" id="top" min="0" max="999" placeholder="100">
+    </div>
+    <div class="field" style="flex:0 0 auto;align-self:flex-end">
+      <label class="switch"><input type="checkbox" id="count"> $count=true</label>
+    </div>
+  </div>
+
+  <div class="field" style="margin-top:6px">
+    <label>$select　<span id="fieldCount" class="sub"></span></label>
+    <div id="selectFields" class="checks"></div>
+  </div>
+</section>
+
+<section class="panel">
+  <div id="validation" class="valid"></div>
+  <div class="seg" id="seg" style="margin:12px 0">
+    <button type="button" class="seg-btn" data-mode="url">URL</button>
+    <button type="button" class="seg-btn" data-mode="ps">PowerShell</button>
+    <button type="button" class="seg-btn" data-mode="curl">curl</button>
+  </div>
+  <div class="field">
+    <label for="out">Generated output</label>
+    <textarea id="out" class="mono" style="min-height:190px" spellcheck="false"></textarea>
+  </div>
+  <button id="cp" class="primary">Copy</button>
+</section>
+
+<!--@AD@-->
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">How authentication works</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>App registration (client credentials)</b> is the norm: register in Entra ID → grant <b>application permissions</b> → <b>admin consent</b> → create a secret</li>
+    <li>Interactive work can use <code class="mono">Connect-MgGraph -Scopes "..."</code> (delegated), but the permissions themselves are defined on the app side</li>
+    <li>Try it in the Graph portal: <code class="mono">/beta/deviceManagement/…</code> at <code class="mono">https://developer.microsoft.com/graph/geek-out</code></li>
+  </ul>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Pitfalls</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>Different syntax from Intune assignment filters</b> — Graph OData uses <code class="mono">eq</code> / <code class="mono">startswith</code>; Intune filters use <code class="mono">-eq</code> / <code class="mono">-startsWith</code>. Mixing them returns HTTP 400</li>
+    <li><b>Properties missing from v1.0 may exist in beta</b> — beta can change; prefer v1.0 in production scripts</li>
+    <li><b>Using $count requires <code class="mono">ConsistencyLevel: eventual</code></b> — without the header you get a 400 (the curl output already sends it)</li>
+    <li><b>Server-side paging</b> — a response is capped; follow <code class="mono">@odata.nextLink</code> to get the rest</li>
+    <li><b>Skipping $select makes responses heavy</b> — on large tenants it is slow, so project only the columns you need</li>
+  </ul>
+  <p class="sub" style="margin:12px 0 0">
+    Reference: <a href="https://learn.microsoft.com/en-us/mem/intune/developer/configure-graph-api-access" rel="noopener">Microsoft Learn — Configure Microsoft Graph API access for Intune</a>
+  </p>
+</section>

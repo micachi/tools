@@ -1,0 +1,74 @@
+<h1>Intune OMA-URI / Windows CSP Lookup</h1>
+<p class="lead">Find and compose the <b>OMA-URI</b> used by Intune custom settings, from the official
+<b>“Graph API property → Windows CSP” mapping (732 entries)</b>.
+An OMA-URI is <code class="mono">CSP root + Offset URI</code>, validated for the leading
+<code class="mono">./</code> and the <code class="mono">Vendor/MSFT/</code> segment.</p>
+
+<section class="panel">
+  <div class="field">
+    <label for="q">Search　<span class="sub">— e.g. BitLocker / firewall / Defender / SharedPC / License (space = AND)</span></label>
+    <input type="text" id="q" placeholder="BitLocker policy" autocomplete="off">
+  </div>
+  <div id="hits" class="sub" style="margin-bottom:8px"></div>
+  <div id="results" class="csplist scrollx"></div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">OMA-URI builder</h2>
+  <div class="row" style="align-items:flex-end">
+    <div class="field" style="flex:1 1 320px;min-width:260px">
+      <label for="csp">CSP root</label>
+      <select id="csp"></select>
+    </div>
+    <div class="field" style="flex:1 1 320px;min-width:260px">
+      <label for="offset">Offset URI</label>
+      <select id="offset"></select>
+    </div>
+  </div>
+  <div id="scope" class="sub" style="margin-bottom:10px"></div>
+  <div class="field">
+    <label for="out">OMA-URI　<span class="sub">— editable; validated on every keystroke</span></label>
+    <textarea id="out" class="mono" style="min-height:74px" spellcheck="false"></textarea>
+  </div>
+  <div id="validation" class="valid"></div>
+  <button id="cp" class="primary" style="margin-top:10px">Copy OMA-URI</button>
+</section>
+
+<!--@AD@-->
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">What the scope means</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><code class="mono">./Device/Vendor/MSFT/…</code> — <b>device scope</b>; settings that do not vary per user</li>
+    <li><code class="mono">./User/Vendor/MSFT/…</code> — <b>user scope</b>; applied to the signed-in user</li>
+    <li><code class="mono">./Vendor/MSFT/…</code> — <b>both Device and User</b>; determined by what you assign it to</li>
+  </ul>
+  <p class="sub" style="margin:10px 0 0">A custom OMA-URI setting is the last resort for settings missing from the UI. Check the <b>settings catalog</b> and <b>policy templates</b> first.</p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Frequently used CSP roots</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><code class="mono">./Device/Vendor/MSFT/Policy/Config/…</code> — the policy family (equivalent to Administrative Templates)</li>
+    <li><code class="mono">./Device/Vendor/MSFT/BitLocker/…</code> — BitLocker encryption</li>
+    <li><code class="mono">./Device/Vendor/MSFT/Firewall/…</code> — Windows Firewall profiles</li>
+    <li><code class="mono">./Device/Vendor/MSFT/PassportForWork/…</code> — Windows Hello for Business</li>
+    <li><code class="mono">./Device/Vendor/MSFT/AssignedAccess/…</code> — kiosk / assigned access</li>
+    <li><code class="mono">./Vendor/MSFT/Defender/…</code> — Microsoft Defender (Device and User)</li>
+  </ul>
+  <p class="sub" style="margin:12px 0 0">
+    Source: <a href="https://learn.microsoft.com/en-us/mem/intune/device-configuration/ref-graph-api-csp-windows" rel="noopener">Microsoft Learn — Graph APIs and matching Windows CSPs used in Intune</a>
+    ／ CSP details: <a href="https://learn.microsoft.com/en-us/windows/client-management/mdm/" rel="noopener">Windows MDM CSP reference</a>
+  </p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Operational notes</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>An entry may have more than one Offset URI</b> — the selector above lists every candidate</li>
+    <li><b>Getting the data type wrong means the setting never applies</b> — confirm integer / string / boolean / XML in the CSP reference</li>
+    <li><b>A doubled slash after joining is the most common error</b> — this tool trims the trailing slash before concatenating</li>
+    <li><b>The mapping is Graph-driven</b> — it shows how Graph entities map to CSPs, not an exhaustive CSP catalogue</li>
+  </ul>
+  <div id="stats" class="sub" style="margin-top:10px"></div>
+</section>

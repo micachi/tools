@@ -1,0 +1,71 @@
+<h1>Intune Win32 検出ルール 生成</h1>
+<p class="lead">Win32 アプリ展開の<b>検出ルール（Detection rules）</b>を検証し、全条件を AND で満たしたときだけ「検出」とみなす
+カスタム検出 PowerShell を生成します。<b>ルール種類・必須フィールド・特殊文字の制約は公式ドキュメント準拠</b>です。</p>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:14px">
+    <div class="field" style="flex:1;min-width:220px">
+      <label for="rtype">ルール種類</label>
+      <select id="rtype"></select>
+    </div>
+    <div style="align-self:flex-end"><button id="add" class="primary">＋ ルールを追加</button></div>
+    <div style="align-self:flex-end"><button id="clear">全消去</button></div>
+  </div>
+  <div id="rules"></div>
+</section>
+
+<section class="panel">
+  <div id="validation" class="valid"></div>
+  <div id="warn" class="warnbox"></div>
+  <div class="field" style="margin-top:12px">
+    <label for="out">カスタム検出スクリプト　<span class="sub">— この .ps1 を「検出方法: カスタム スクリプト」でアップロード</span></label>
+    <textarea id="out" class="mono" style="min-height:280px" spellcheck="false"></textarea>
+  </div>
+  <button id="cp" class="primary">スクリプトをコピー</button>
+  <button id="dl">detect.ps1 保存</button>
+</section>
+
+<!--@AD@-->
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">検出の契約（カスタムスクリプト）</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+    <thead><tr style="color:var(--mut);text-align:left">
+      <th style="padding:8px;border-bottom:1px solid var(--line)">終了コード</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">STDOUT</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">Intune の判定</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">0</td><td style="padding:8px;border-bottom:1px solid var(--line)">文字列あり</td><td style="padding:8px;border-bottom:1px solid var(--line)"><b>検出</b>（インストール済みとみなす）</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">0</td><td style="padding:8px;border-bottom:1px solid var(--line)">出力なし</td><td style="padding:8px;border-bottom:1px solid var(--line)"><b>未検出</b>（未インストールとみなす）</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">0 以外</td><td style="padding:8px;border-bottom:1px solid var(--line)">—</td><td style="padding:8px;border-bottom:1px solid var(--line)">エラー（検出失敗・展開は継続されない）</td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin:10px 0 0">スクリプトの既定タイムアウトは <b>60 秒</b>。超過は検出失敗になります。重い処理（Win32_Product の全列挙など）は避けてください。</p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">ルール型の決まり（公式）</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>ルールは最低 1 個</b>必要。0 個では展開できません</li>
+    <li><b>複数ルールは AND</b> — 全ルール条件を満たすことが検出の条件です（OR は組めません）</li>
+    <li><b>MSI</b> — プロダクトコード（GUID）で照合。<b>追加は 1 回のみ</b>。バージョン確認も選択可</li>
+    <li><b>ファイル / フォルダ</b> — Path に <code class="mono">,</code> や <code class="mono">"</code> など一部の特殊文字を含めると検出が壊れます</li>
+    <li><b>レジストリ</b> — Key path は <code class="mono">HKEY_LOCAL_MACHINE\…</code> / <code class="mono">HKLM\…</code> 形式。Value name 空なら<b>キーの存在</b>で検出</li>
+    <li><b>64bit クライアントで 32bit アプリのパス／レジストリを検出する場合は「32bit ファイル システム / レジストリ」のラップを考慮</b>（Program Files (x86)・Wow6432Node）</li>
+    <li><b>アプリ未検出の場合</b>、required intent のアプリは<b>約 24 時間以内</b>に再提供されます</li>
+  </ul>
+  <p class="sub" style="margin:12px 0 0">
+    参考: <a href="https://learn.microsoft.com/en-us/mem/intune/app-management/deployment/add-win32" rel="noopener">Microsoft Learn — Add Win32 apps / Step 4: Detection rules</a>
+  </p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">よくある落とし穴</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>検出ルールが広すぎる</b> → 旧バージョンを検出したまま「インストール済み」となり、更新が当たりません。バージョン条件を必ず入れる</li>
+    <li><b>検出ルールが狭すぎる</b> → 展開後に条件が崩れる（ログ削除・パス移動など）と、毎回再展開ループになります</li>
+    <li><b>MSI を「ファイル存在」で代用する</b> → 別ミドルウェアの同パスファイルを拾うことがあります。MSI は MSI で検出してください</li>
+    <li><b>PowerShell を「出力あり＝成功」で書き忘れる</b> → 出力がないと常に未検出になります（本ツールは最後に必ず <code class="mono">Write-Output</code> を置きます）</li>
+  </ul>
+</section>

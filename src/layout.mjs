@@ -39,10 +39,15 @@ export const UI = {
 export const SITE = [
   { cat: { ja: "作成・生成", en: "Create & generate" }, items: [
     { slug: "qr",             title: { ja: "QRコード生成", en: "QR Code Generator" } },
-    { slug: "intunestart",    title: { ja: "Intune スタートレイアウト", en: "Intune Start Layout" } },
-    { slug: "intune-filter",  title: { ja: "Intune 割り当てフィルター", en: "Intune Assignment Filter" } },
     { slug: "managed-bookmarks", title: { ja: "管理対象ブックマーク（Edge / Chrome）", en: "Managed Bookmarks (Edge / Chrome)" } },
     { slug: "password",       title: { ja: "パスワード一括生成", en: "Bulk Password Generator" } },
+  ]},
+  { cat: { ja: "Intune / MDM", en: "Intune / MDM" }, items: [
+    { slug: "intunestart",    title: { ja: "Intune スタートレイアウト", en: "Intune Start Layout" } },
+    { slug: "intune-filter",  title: { ja: "Intune 割り当てフィルター", en: "Intune Assignment Filter" } },
+    { slug: "win32-detect",   title: { ja: "Win32 検出ルール", en: "Win32 Detection Rules" } },
+    { slug: "intune-csp",     title: { ja: "OMA-URI / CSP 検索", en: "OMA-URI / CSP Lookup" } },
+    { slug: "intune-graph",   title: { ja: "Graph API 照会スニペット", en: "Graph API Query Snippets" } },
   ]},
   { cat: { ja: "検査・整形", en: "Inspect & format" }, items: [
     { slug: "mojicount", title: { ja: "文字数カウンター", en: "Character Counter" } },

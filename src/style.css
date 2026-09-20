@@ -205,6 +205,17 @@ th{color:var(--mut);font-weight:600;font-size:.83rem}
 .tname:focus,.turl:focus{border-color:var(--acc);outline:none}
 @media(max-width:640px){.tname{flex-basis:110px}}
 
+/* OMA-URI / CSP 検索結果 */
+.csplist{display:flex;flex-direction:column;gap:6px;max-height:430px;overflow-y:auto;padding-right:4px}
+.csprow{display:grid;grid-template-columns:minmax(170px,1.1fr) minmax(190px,1.2fr) minmax(130px,1fr) auto;
+  gap:3px 12px;align-items:center;background:#0f131b;border:1px solid var(--line);border-radius:9px;
+  padding:8px 11px;cursor:pointer;transition:.12s}
+.csprow:hover,.csprow:focus{border-color:var(--acc);background:#151d29;outline:none}
+.cspname{font-size:.88rem;font-weight:600}
+.csppath{font-size:.76rem;color:var(--mut);word-break:break-all}
+.cspoff{font-size:.76rem;color:#8fb4e8;word-break:break-all}
+@media(max-width:760px){.csprow{grid-template-columns:1fr}}
+
 /* 開示パネル */
 .disclosure{background:#141a24;border-color:#2f3b4d}
 

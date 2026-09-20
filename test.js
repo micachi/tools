@@ -13,7 +13,8 @@ const ok = (name, cond, extra = "") => {
 };
 
 console.log("\n=== 1. 成果物の存在 ===");
-const SLUGS = ["qr", "mojicount", "color", "json", "unit", "datecalc", "intunestart", "password", "managed-bookmarks"];
+const SLUGS = ["qr", "mojicount", "color", "json", "unit", "datecalc", "intunestart", "intune-filter",
+               "win32-detect", "intune-csp", "intune-graph", "password", "managed-bookmarks"];
 const pages = ["index.html", "en/index.html"]
   .concat(SLUGS.map((s) => `${s}/index.html`))
   .concat(SLUGS.map((s) => `en/${s}/index.html`));
@@ -38,11 +39,12 @@ console.log("\n=== 1b. 新ツールの必須要素 ===");
 
 console.log("\n=== 2. 相互リンク構造（全ページが他全ページへ参照） ===");
 const targets = ["qr/", "mojicount/", "color/", "json/", "unit/", "datecalc/",
-                "intunestart/", "password/", "managed-bookmarks/"];
+                "intunestart/", "intune-filter/", "win32-detect/", "intune-csp/", "intune-graph/",
+                "password/", "managed-bookmarks/"];
 for (const p of pages) {
   const h = fs.readFileSync(path.join(DIST, p), "utf8");
   const missing = targets.filter((t) => !h.includes(t));
-  ok(p + " → 5対象すべてへリンク", missing.length === 0, missing.length ? "欠落: " + missing.join(",") : "");
+  ok(p + ` → 全対象（${targets.length}）へリンク`, missing.length === 0, missing.length ? "欠落: " + missing.join(",") : "");
 }
 
 console.log("\n=== 3. 空 href / 壊れたプレースホルダ ===");
@@ -234,7 +236,8 @@ console.log("\n=== 9. DOM ID 整合性（JS が参照する id が HTML に実�
   const fs2 = require("fs");
   const jsDir = path.join(__dirname, "src", "js");
   const pgDir = path.join(__dirname, "src", "pages");
-  const skip = ["intunestart-core.js", "password-core.js", "password-app.js", "managed-bookmarks-core.js", "intune-filter-core.js"]; // DOM 非依存 or 複数ファイル構成
+  const skip = ["intunestart-core.js", "password-core.js", "password-app.js", "managed-bookmarks-core.js",
+               "intune-filter-core.js", "win32-detect-core.js", "intune-csp-core.js", "intune-graph-core.js"]; // DOM 非依存 or 複数ファイル構成
 
   const jsFiles = fs2.readdirSync(jsDir).filter((f) => f.endsWith(".js") && !skip.includes(f));
   ok("対象 JS を検出", jsFiles.length >= 7, jsFiles.length + " 件");
@@ -251,6 +254,8 @@ console.log("\n=== 9. DOM ID 整合性（JS が参照する id が HTML に実�
     const ids = new Set();
     for (const m of js.matchAll(/\$\("([A-Za-z][A-Za-z0-9_-]*)"\)/g)) ids.add(m[1]);
     for (const m of js.matchAll(/getElementById\("([A-Za-z][A-Za-z0-9_-]*)"\)/g)) ids.add(m[1]);
+    // set("id", v) のような間接参照も拾う（mojicount の sp 欠落がこの系統の実バグ）
+    for (const m of js.matchAll(/\bset\("([A-Za-z][A-Za-z0-9_-]*)"/g)) ids.add(m[1]);
     totalRefs += ids.size;
 
     const missing = [...ids].filter((id) => !new RegExp(`id="${id}"`).test(html));
@@ -743,6 +748,144 @@ console.log("\n=== 21. Intune 割り当てフィルター ルール生成 ===");
     ok(`${p}: 3072 文字の上限を明記`, h.includes("3,072") || h.includes("3072"));
     ok(`${p}: Null の制限を明記`, h.includes("$Null"));
   }
+}
+
+console.log("\n=== 22. Win32 検出ルール生成 ===");
+{
+  const W3D = require(path.join(__dirname, "src", "js", "win32-detect-core.js"));
+  const msi = { type: "msi", productCode: "{2A1B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}" };
+  ok("MSI: 正しい GUID は通る", W3D.validate([msi]).length === 0, W3D.validate([msi]).join("|"));
+  ok("MSI: 波括弧なし GUID も通る",
+    W3D.validate([{ type: "msi", productCode: "2A1B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D" }]).length === 0);
+  ok("MSI: 非 GUID を弾く", W3D.validate([{ type: "msi", productCode: "not-a-guid" }]).length > 0);
+  ok("MSI: 2 個目を弾く（追加は 1 回のみ）",
+    W3D.validate([msi, msi]).some((e) => e.includes("1 回")), W3D.validate([msi, msi]).join("|"));
+  ok("File: カンマ入り Path を弾く（公式で不可）",
+    W3D.validate([{ type: "file", path: "C:\\a,b", fileOrFolder: "x.exe", exists: true }]).some((e) => e.includes("カンマ")));
+  ok("File: クォート入り Path を弾く",
+    W3D.validate([{ type: "file", path: 'C:\\a"b', fileOrFolder: "x.exe", exists: true }]).length > 0);
+  ok("File: 存在も最小バージョンも無しを弾く",
+    W3D.validate([{ type: "file", path: "C:\\a", fileOrFolder: "x.exe", exists: false, minVersion: "" }]).length > 0);
+  ok("File: 正常系は通る",
+    W3D.validate([{ type: "file", path: "C:\\Program Files\\App", fileOrFolder: "app.exe", exists: true }]).length === 0,
+    W3D.validate([{ type: "file", path: "C:\\Program Files\\App", fileOrFolder: "app.exe", exists: true }]).join("|"));
+  ok("Reg: 不正ルートキーを弾く", W3D.validate([{ type: "registry", keyPath: "FOO\\Bar\\Baz" }]).length > 0);
+  ok("Reg: HKLM 形式は通る",
+    W3D.validate([{ type: "registry", keyPath: "HKLM\\Software\\Vendor\\App", valueName: "Version" }]).length === 0);
+  ok("ルール 0 個を弾く（最低 1 個必要）", W3D.validate([]).length > 0);
+
+  const script = W3D.buildScript([
+    msi,
+    { type: "file", path: "C:\\App", fileOrFolder: "app.exe", exists: true },
+    { type: "registry", keyPath: "HKLM\\Software\\V\\A", valueName: "Version" },
+  ]);
+  ok("スクリプト: 検出契約（終了コード / STDOUT）を明記", script.includes("exit 0") && script.includes("STDOUT"));
+  ok("スクリプト: 全ルール AND である旨を明記", script.includes("AND"));
+  ok("スクリプト: 検出時は Write-Output → exit 0 で終える",
+    script.includes("Write-Output") && script.trim().endsWith("exit 0"));
+  ok("スクリプト: 3 ルール分が含まれる", (script.match(/# --- rule \d/g) || []).length === 3,
+    String((script.match(/# --- rule \d/g) || []).length));
+  ok("スクリプト: PS ドライブ（HKLM:）に変換", script.includes("HKLM:"));
+  ok("スクリプト: 未検出分岐は出力なし exit 0", /if [^\n]*\{ exit 0 \}/.test(script) || script.includes("exit 0"));
+
+  for (const p of ["win32-detect/index.html", "en/win32-detect/index.html"]) {
+    const h = fs.readFileSync(path.join(DIST, p), "utf8");
+    ok(`${p}: ルール編集・検証・スクリプト欄がある`,
+      ["rtype", "rules", "validation", "out", "cp", "dl"].every((id) => h.includes(`id="${id}"`)));
+    ok(`${p}: 検出契約（終了コードと出力）を明記`, h.includes("終了コード") || h.includes("Exit code"));
+    ok(`${p}: 60 秒タイムアウトを明記`, h.includes("60"));
+  }
+}
+
+console.log("\n=== 23. OMA-URI / Windows CSP 対応表 ===");
+{
+  global.CSP_MAP = JSON.parse(fs.readFileSync(path.join(__dirname, "src", "csp-map.json"), "utf8"));
+  const ICS = require(path.join(__dirname, "src", "js", "intune-csp-core.js"));
+  ok("公式 Graph↔CSP 対応表 732 件", ICS.MAP.length === 732, String(ICS.MAP.length));
+  const st = ICS.stats();
+  ok("全件が正しい形（csp + offsets あり）", st.badShape === 0, JSON.stringify(st));
+  ok("全 OMA-URI が形式検証を通過（抽出ノイズ無し）", st.badUri === 0, "badUri=" + st.badUri);
+  ok("CSP ルート 21 系統", st.nodes === 21, String(st.nodes));
+  ok("スコープ判定: Device", ICS.scopeOf("./Device/Vendor/MSFT/BitLocker") === "Device");
+  ok("スコープ判定: User", ICS.scopeOf("./User/Vendor/MSFT/Policy") === "User");
+  ok("スコープ判定: Vendor（両対応）", ICS.scopeOf("./Vendor/MSFT/Policy").includes("Vendor"));
+  ok("連結: 二重スラッシュが出ない", ICS.omaUri("./Device/Vendor/MSFT/X/", "/Y") === "./Device/Vendor/MSFT/X/Y");
+  ok("連結: Offset 先頭スラッシュ無しでも整形", ICS.omaUri("./Device/Vendor/MSFT/X", "Y") === "./Device/Vendor/MSFT/X/Y");
+  ok("検索: bitlocker でヒット", ICS.search("bitlocker").length > 0, String(ICS.search("bitlocker").length));
+  ok("検索: 複数語は AND 条件",
+    ICS.search("firewall profile").every((e) => {
+      const h = `${e.name} ${e.csp} ${e.offsets.join(" ")}`.toLowerCase();
+      return h.includes("firewall") && h.includes("profile");
+    }));
+  ok("検証: 先頭 ./ 無しを弾く", ICS.validateUri("Device/Vendor/MSFT/X").length > 0);
+  ok("検証: Vendor/MSFT 無しを弾く", ICS.validateUri("./Device/Foo/Bar").length > 0);
+  ok("検証: 空白を含んだ URI を弾く", ICS.validateUri("./Device/Vendor/MSFT/Policy Config").length > 0);
+  ok("検証: 正しい OMA-URI は通る",
+    ICS.validateUri("./Device/Vendor/MSFT/Policy/Config/Defender/AttackSurfaceReductionRules").length === 0);
+  ok("プレースホルダ {AADTenantId} を保持", ICS.search("AADTenantId").length === 11, String(ICS.search("AADTenantId").length));
+  for (const p of ["intune-csp/index.html", "en/intune-csp/index.html"]) {
+    const h = fs.readFileSync(path.join(DIST, p), "utf8");
+    ok(`${p}: 検索欄と OMA-URI ビルダーがある`,
+      ["q", "results", "csp", "offset", "out", "validation", "cp"].every((id) => h.includes(`id="${id}"`)));
+    ok(`${p}: 732 件を明記`, h.includes("732"));
+    ok(`${p}: 公式出典リンクあり`, h.includes("ref-graph-api-csp-windows"));
+  }
+}
+
+console.log("\n=== 24. Graph API 照会スニペット ===");
+{
+  const IGR = require(path.join(__dirname, "src", "js", "intune-graph-core.js"));
+  const P = "deviceManagement/managedDevices";
+  ok("既定 URL: v1.0 + リソース",
+    IGR.buildUrl({ path: P, version: "v1.0" }) === "https://graph.microsoft.com/v1.0/deviceManagement/managedDevices",
+    IGR.buildUrl({ path: P, version: "v1.0" }));
+  ok("beta 指定が反映される", IGR.buildUrl({ path: P, version: "beta" }).startsWith("https://graph.microsoft.com/beta/"));
+  const u = IGR.buildUrl({ path: P, version: "v1.0", filter: "operatingSystem eq 'Windows'",
+    select: ["id", "deviceName"], orderBy: "deviceName asc", top: 50, count: true });
+  ok("$filter / $select / $orderby / $top / $count が全て出力",
+    ["$filter=", "$select=id,deviceName", "$orderby=", "$top=50", "$count=true"].every((s) => u.includes(s)), u);
+  ok("クエリ未指定なら ? を付けない", !IGR.buildUrl({ path: P }).includes("?"));
+  const ps = IGR.buildPowerShell({ path: P, select: ["id"], top: 10 });
+  ok("PowerShell: Get-MgDeviceManagementManagedDevices", ps.includes("Get-MgDeviceManagementManagedDevices"));
+  ok("PowerShell: 必要アプリ権限をコメント", ps.includes("DeviceManagementManagedDevices.Read.All"));
+  ok("PowerShell: -Top が反映される", ps.includes("-Top 10"));
+  ok("curl: ConsistencyLevel ヘッダ付き", IGR.buildCurl({ path: P }).includes("ConsistencyLevel: eventual"));
+  ok("検証: 不明リソースを弾く", IGR.validate({ path: "deviceManagement/nope" }).length > 0);
+  ok("検証: 不正 api-version を弾く", IGR.validate({ path: P, version: "v2.0" }).length > 0);
+  ok("検証: $top の非整数を弾く", IGR.validate({ path: P, top: "abc" }).length > 0);
+  ok("検証: $top 999 超を弾く", IGR.validate({ path: P, top: 5000 }).length > 0);
+  ok("検証: $filter のクォート未閉鎖を弾く", IGR.validate({ path: P, filter: "name eq 'x" }).length > 0);
+  ok("検証: Intune 構文 -eq の混入を検出",
+    IGR.validate({ path: P, filter: "name -eq 'x'" }).some((e) => e.includes("eq")), "構文混同ガード");
+  ok("検証: $select の存在しないフィールドを弾く", IGR.validate({ path: P, select: ["notAField"] }).length > 0);
+  ok("検証: 正常系は通る",
+    IGR.validate({ path: P, version: "v1.0", filter: "operatingSystem eq 'Windows'", select: ["id"], top: 10 }).length === 0,
+    JSON.stringify(IGR.validate({ path: P, version: "v1.0", filter: "operatingSystem eq 'Windows'", select: ["id"], top: 10 })));
+  ok("全リソースが path + 権限つき", IGR.RESOURCES.every((r) => r.path.startsWith("deviceManagement/") && !!r.perm),
+    IGR.RESOURCES.length + " リソース");
+  for (const p of ["intune-graph/index.html", "en/intune-graph/index.html"]) {
+    const h = fs.readFileSync(path.join(DIST, p), "utf8");
+    ok(`${p}: 入力と 3 形式（URL / PowerShell / curl）出力がある`,
+      ["res", "ver", "filter", "orderby", "top", "count", "selectFields", "seg", "out", "cp"].every((id) => h.includes(`id="${id}"`)));
+    ok(`${p}: ベース URL を明記`, h.includes("graph.microsoft.com"));
+  }
+}
+
+console.log("\n=== 25. メニュー構成（カテゴリ再構成） ===");
+{
+  const h = fs.readFileSync(path.join(DIST, "index.html"), "utf8");
+  const en = fs.readFileSync(path.join(DIST, "en/index.html"), "utf8");
+  const catsJa = ["作成・生成", "Intune / MDM", "検査・整形", "計算"];
+  const catsEn = ["Create & generate", "Intune / MDM", "Inspect & format", "Calculators"];
+  ok("JA ナビに 4 カテゴリ", catsJa.every((c) => h.includes(c)), catsJa.filter((c) => !h.includes(c)).join(",") || "OK");
+  ok("EN ナビに 4 カテゴリ（日本語ラベル残存なし）",
+    catsEn.every((c) => en.includes(c)) && !catsJa.filter((c) => c !== "Intune / MDM").some((c) => en.includes(c)),
+    catsEn.filter((c) => !en.includes(c)).join(",") || "OK");
+  ok("Intune 系 5 ツールが同一カテゴリにまとまっている", /Intune \/ MDM[\s\S]*?win32-detect[\s\S]*?intune-csp[\s\S]*?intune-graph/.test(h));
+  ok("カテゴリ順が安定（作成・生成 → Intune）", h.indexOf("作成・生成") < h.indexOf("Intune / MDM"));
+  const menu = h.slice(h.indexOf('id="ddMenu"'), h.indexOf('class="nav-cur"'));
+  ok("ナビメニューから全 13 ツールへ到達", SLUGS.every((s) => menu.includes(`href="./${s}/"`)),
+    SLUGS.filter((s) => !menu.includes(`href="./${s}/"`)).join(",") || "13/13");
 }
 
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);

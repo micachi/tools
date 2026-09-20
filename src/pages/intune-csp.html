@@ -1,0 +1,74 @@
+<h1>Intune OMA-URI / Windows CSP 検索</h1>
+<p class="lead">Intune のカスタム設定で使う <b>OMA-URI</b> を、公式の
+<b>「Graph API プロパティ → Windows CSP」対応表 732 件</b>から検索して合成します。
+OMA-URI は <code class="mono">CSP ルート + Offset URI</code> の連結。先頭 <code class="mono">./</code> や
+<code class="mono">Vendor/MSFT/</code> の形式検証つきです。</p>
+
+<section class="panel">
+  <div class="field">
+    <label for="q">検索　<span class="sub">— 例: BitLocker / firewall / Defender / SharedPC / License（スペースで AND 検索）</span></label>
+    <input type="text" id="q" placeholder="BitLocker policy" autocomplete="off">
+  </div>
+  <div id="hits" class="sub" style="margin-bottom:8px"></div>
+  <div id="results" class="csplist scrollx"></div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">OMA-URI ビルダー</h2>
+  <div class="row" style="align-items:flex-end">
+    <div class="field" style="flex:1 1 320px;min-width:260px">
+      <label for="csp">CSP ルート</label>
+      <select id="csp"></select>
+    </div>
+    <div class="field" style="flex:1 1 320px;min-width:260px">
+      <label for="offset">Offset URI</label>
+      <select id="offset"></select>
+    </div>
+  </div>
+  <div id="scope" class="sub" style="margin-bottom:10px"></div>
+  <div class="field">
+    <label for="out">OMA-URI　<span class="sub">— 直接編集もできます（入力ごとに検証）</span></label>
+    <textarea id="out" class="mono" style="min-height:74px" spellcheck="false"></textarea>
+  </div>
+  <div id="validation" class="valid"></div>
+  <button id="cp" class="primary" style="margin-top:10px">OMA-URI をコピー</button>
+</section>
+
+<!--@AD@-->
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">スコープの意味</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><code class="mono">./Device/Vendor/MSFT/…</code> — <b>デバイス単位</b>。ユーザーごとに変わらない設定はこちら</li>
+    <li><code class="mono">./User/Vendor/MSFT/…</code> — <b>ユーザー単位</b>。ログオンしたユーザーに適用される設定</li>
+    <li><code class="mono">./Vendor/MSFT/…</code> — <b>Device / User 両対応</b>。割り当て対象で決まります</li>
+  </ul>
+  <p class="sub" style="margin:10px 0 0">カスタム OMA-URI 設定は「設定カタログに無い設定を投入する最後の手段」です。まず<b>設定カタログ</b>と<b>ポリシーテンプレート</b>を探し、無い場合に使ってください。</p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">よく使う CSP ルート</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><code class="mono">./Device/Vendor/MSFT/Policy/Config/…</code> — ポリシー系（Administrative Templates 相当）の最大系統</li>
+    <li><code class="mono">./Device/Vendor/MSFT/BitLocker/…</code> — BitLocker 暗号化</li>
+    <li><code class="mono">./Device/Vendor/MSFT/Firewall/…</code> — Windows Firewall プロファイル</li>
+    <li><code class="mono">./Device/Vendor/MSFT/PassportForWork/…</code> — Windows Hello for Business</li>
+    <li><code class="mono">./Device/Vendor/MSFT/AssignedAccess/…</code> — Kiosk / 割り当てアクセス</li>
+    <li><code class="mono">./Vendor/MSFT/Defender/…</code> — Microsoft Defender（Device / User 両対応）</li>
+  </ul>
+  <p class="sub" style="margin:12px 0 0">
+    出典: <a href="https://learn.microsoft.com/en-us/mem/intune/device-configuration/ref-graph-api-csp-windows" rel="noopener">Microsoft Learn — Graph APIs and matching Windows CSPs used in Intune</a>
+    ／ CSP 詳細は <a href="https://learn.microsoft.com/en-us/windows/client-management/mdm/" rel="noopener">Windows MDM CSP リファレンス</a>
+  </p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">運用メモ</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>Offset URI は 1 つとは限らない</b> — 同じ CSP に複数 Offset があります。上のセレクトで全候補を確認できます</li>
+    <li><b>数据类型（Data type）を間違えると不適用</b> — 整数 / 文字列 / 真偽 / XML を CSP リファレンスで確認してください</li>
+    <li><b>連結時の二重スラッシュが最頻出のエラー</b> — 本ツールは末尾スラッシュを整形してから連結します</li>
+    <li><b>対応表は Graph 起点</b> — Graph の管理単位と CSP の対応を示したもので、全 CSP を網羅するものではありません</li>
+  </ul>
+  <div id="stats" class="sub" style="margin-top:10px"></div>
+</section>

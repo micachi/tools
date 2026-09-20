@@ -1,0 +1,71 @@
+<h1>Intune Win32 Detection Rule Builder</h1>
+<p class="lead">Validate Win32 app <b>detection rules</b> and generate a custom detection PowerShell script that reports
+"app detected" only when <b>every</b> rule condition holds. <b>Rule types, required fields and character restrictions follow the official documentation.</b></p>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:14px">
+    <div class="field" style="flex:1;min-width:220px">
+      <label for="rtype">Rule type</label>
+      <select id="rtype"></select>
+    </div>
+    <div style="align-self:flex-end"><button id="add" class="primary">＋ Add rule</button></div>
+    <div style="align-self:flex-end"><button id="clear">Clear all</button></div>
+  </div>
+  <div id="rules"></div>
+</section>
+
+<section class="panel">
+  <div id="validation" class="valid"></div>
+  <div id="warn" class="warnbox"></div>
+  <div class="field" style="margin-top:12px">
+    <label for="out">Custom detection script　<span class="sub">— upload this .ps1 as the detection method</span></label>
+    <textarea id="out" class="mono" style="min-height:280px" spellcheck="false"></textarea>
+  </div>
+  <button id="cp" class="primary">Copy script</button>
+  <button id="dl">Save detect.ps1</button>
+</section>
+
+<!--@AD@-->
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">The detection contract (custom script)</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+    <thead><tr style="color:var(--mut);text-align:left">
+      <th style="padding:8px;border-bottom:1px solid var(--line)">Exit code</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">STDOUT</th>
+      <th style="padding:8px;border-bottom:1px solid var(--line)">How Intune reads it</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">0</td><td style="padding:8px;border-bottom:1px solid var(--line)">non-empty</td><td style="padding:8px;border-bottom:1px solid var(--line)"><b>Detected</b> (app is considered installed)</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">0</td><td style="padding:8px;border-bottom:1px solid var(--line)">no output</td><td style="padding:8px;border-bottom:1px solid var(--line)"><b>Not detected</b> (app is considered absent)</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">non-zero</td><td style="padding:8px;border-bottom:1px solid var(--line)">—</td><td style="padding:8px;border-bottom:1px solid var(--line)">Error (detection failed, deployment does not continue)</td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin:10px 0 0">The default script timeout is <b>60 seconds</b>; exceeding it counts as a detection failure. Avoid heavy work such as enumerating all of Win32_Product.</p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Rules per type (official)</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>At least one rule</b> is required — you cannot deploy with zero rules</li>
+    <li><b>Multiple rules are ANDed</b> — all rule conditions must be satisfied for the app to be detected (there is no OR)</li>
+    <li><b>MSI</b> — matched by product code (GUID); <b>can only be added once</b>, product version check optional</li>
+    <li><b>File / folder</b> — the Path must not contain certain special characters such as <code class="mono">,</code> or <code class="mono">"</code>, which break detection</li>
+    <li><b>Registry</b> — key path must be <code class="mono">HKEY_LOCAL_MACHINE\…</code> / <code class="mono">HKLM\…</code>; an empty value name detects <b>the key itself</b></li>
+    <li><b>On 64-bit clients, 32-bit paths and registry keys are redirected</b> — account for Program Files (x86) and Wow6432Node</li>
+    <li><b>When the app is not detected</b>, a required-intent app is re-offered <b>within about 24 hours</b></li>
+  </ul>
+  <p class="sub" style="margin:12px 0 0">
+    Reference: <a href="https://learn.microsoft.com/en-us/mem/intune/app-management/deployment/add-win32" rel="noopener">Microsoft Learn — Add Win32 apps / Step 4: Detection rules</a>
+  </p>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Common pitfalls</h2>
+  <ul style="font-size:.86rem;color:var(--mut);margin:0;padding-left:20px">
+    <li><b>Detection too loose</b> — an old version is detected as installed and the update never lands. Always include a version condition</li>
+    <li><b>Detection too strict</b> — if the condition breaks after install (log cleanup, path move), the app re-installs in a loop</li>
+    <li><b>Using a file check in place of MSI</b> — it can match a file shipped by unrelated software. Detect MSI as MSI</li>
+    <li><b>Forgetting to write output on success</b> — with no output the app is always "not detected" (this tool always ends with <code class="mono">Write-Output</code>)</li>
+  </ul>
+</section>
