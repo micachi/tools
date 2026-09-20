@@ -1,0 +1,120 @@
+<h1>Managed Bookmarks Generator (Edge / Chrome)</h1>
+<p class="lead">Build managed browser bookmarks by editing a folder tree.
+<b>Edge's <code class="mono">ManagedFavorites</code> and Chrome's <code class="mono">ManagedBookmarks</code> share an identical JSON schema</b>, so you build once and switch targets.</p>
+
+<section class="panel">
+  <div class="field">
+    <span class="lb">Deployment target</span>
+    <div class="seg" role="group" aria-label="Deployment target">
+      <button type="button" class="seg-btn on" data-t="edge" aria-pressed="true">Microsoft Edge</button>
+      <button type="button" class="seg-btn" data-t="chrome" aria-pressed="false">Google Chrome</button>
+    </div>
+    <p class="sub" style="margin:9px 0 0">
+      Policy: <b class="mono" id="polName">ManagedFavorites</b>　／
+      Windows registry: <b class="mono" id="polWin">SOFTWARE\Policies\Microsoft\Edge</b>　／
+      macOS: <b class="mono" id="polMac">com.microsoft.Edge</b>
+    </p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="field">
+    <label for="topName">Top-level folder name (<code class="mono">toplevel_name</code>)</label>
+    <input type="text" id="topName" placeholder="Managed favorites">
+    <p class="sub" style="margin:7px 0 0">If omitted, each browser's default name is used. Users <b>cannot modify</b> this folder (though they can hide it from the bookmark bar).</p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:14px">
+    <button id="ab" class="primary">＋ Bookmark</button>
+    <button id="af">＋ Folder</button>
+    <button id="clear">Clear all</button>
+    <span class="sub">Use ＋🔖 / ＋📁 on a folder to nest inside it</span>
+  </div>
+  <div id="tree"></div>
+</section>
+
+<section class="panel">
+  <div id="validation" class="valid"></div>
+  <div class="field" style="margin-top:12px">
+    <label for="out">JSON　<span class="sub">— editable. Paste an existing policy JSON to load it into the tree above</span></label>
+    <textarea id="out" class="mono" style="min-height:280px" spellcheck="false"></textarea>
+  </div>
+  <div class="row">
+    <button id="cp" class="primary">Copy JSON</button>
+    <button id="dl">ManagedFavorites.json 保存</button>
+    <label class="filebtn"><input type="file" id="impFile" accept=".json,application/json" hidden>Load file</label>
+    <span class="sub" id="impName"></span>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">Schema (identical for Edge and Chrome)</h2>
+  <p style="font-size:.86rem;margin:0 0 8px">Each array element is one of the following. <b>A folder has no <code class="mono">url</code> key and instead carries <code class="mono">children</code></b> — this distinction is mandatory.</p>
+  <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+    <thead><tr style="color:var(--mut);text-align:left">
+      <th style="padding:8px;border-bottom:1px solid var(--line)">Key</th><th style="padding:8px;border-bottom:1px solid var(--line)">Meaning</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">toplevel_name</td><td style="padding:8px;border-bottom:1px solid var(--line)">Name of the containing folder (exactly one, anywhere in the array)</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">name + url</td><td style="padding:8px;border-bottom:1px solid var(--line)">A bookmark</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">name + children</td><td style="padding:8px;border-bottom:1px solid var(--line)">A subfolder (nesting recurses)</td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin:10px 0 0">
+    URLs without a scheme are completed by the browser exactly as if typed in the address bar (<code class="mono">example.com</code> → <code class="mono">https://example.com/</code>).
+  </p>
+</section>
+
+<section class="panel warnbox">
+  <h2 style="font-size:1rem;margin:0 0 8px">⚠ Read before deploying</h2>
+  <p class="sub" style="margin:0 0 10px">Common to both: managed bookmarks are <b>not synced to the user account</b> and cannot be modified by extensions. Users <b>can hide the folder</b> (which you cannot detect).</p>
+
+  <div data-for="edge">
+    <ul style="font-size:.86rem;margin:0;padding-left:20px">
+      <li><b>Cannot be used as a "Recommended" policy</b> — mandatory only. Configuring it as a recommended value is <b>unsupported</b></li>
+      <li><b>Does not apply to profiles signed in with a Microsoft account</b> — an Edge 116+ restriction. Design for <b>Entra ID joined / WorkProfile</b></li>
+      <li><b>Supported versions</b> — Windows / macOS ≥ 77 ／ Android ≥ 30 ／ iOS ≥ 85</li>
+      <li><b>Dynamic policy refresh</b> — supported; applies without waiting for re-login</li>
+    </ul>
+  </div>
+
+  <div data-for="chrome" hidden>
+    <ul style="font-size:.86rem;margin:0;padding-left:20px">
+      <li><b>The browser must be managed first</b> — Chrome <b>ignores policies on machines that are not enrolled</b>. Writing the registry key or managed preferences does nothing on its own. Enroll in <b>Chrome Browser Cloud Management</b> or on-premises management (GPO / managed settings) first</li>
+      <li><b>Domain join alone is not enough</b> — Chrome applies policies only after it detects a management source. Check <code class="mono">chrome://policy</code> on the client to confirm what actually landed</li>
+      <li><b>Supported versions</b> — Chrome ≥ 37 ／ ChromeOS ≥ 37 ／ Android ≥ 30 ／ iOS ≥ 88</li>
+      <li><b>Dynamic policy refresh</b> — supported ／ per-profile — supported</li>
+      <li><b>Personal Google accounts</b> — management is browser-wide, so the policy can land on personal profiles too. Plan profile separation separately if you need it</li>
+    </ul>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">Where to deploy</h2>
+
+  <div data-for="edge">
+    <ol style="font-size:.86rem;margin:0;padding-left:20px">
+      <li>Intune admin center → <b>Devices → Configuration policies → Create → Windows 10 and later</b></li>
+      <li>Search the settings catalog for <b>"Configure favorites"</b> (<code class="mono">ManagedFavorites</code>)</li>
+      <li>Paste the generated JSON → assign to your target group</li>
+    </ol>
+    <p class="sub" style="margin:10px 0 0">
+      Reference: <a href="https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/managedfavorites" rel="noopener">Microsoft Learn — ManagedFavorites policy</a>
+    </p>
+  </div>
+
+  <div data-for="chrome" hidden>
+    <ol style="font-size:.86rem;margin:0;padding-left:20px">
+      <li>Google Admin console → <b>Devices → Chrome → Settings → User and browser settings</b></li>
+      <li>Search for <b>"Managed bookmarks"</b> (<code class="mono">ManagedBookmarks</code>)</li>
+      <li>Paste the generated JSON → apply to your target organizational unit</li>
+    </ol>
+    <p class="sub" style="margin:10px 0 0">
+      For on-premises management use <code class="mono">chrome.admx</code> (GPO) or the macOS managed setting <code class="mono">com.google.Chrome</code>.<br>
+      Verify on the client by opening <code class="mono">chrome://policy</code>.
+      Reference: <a href="https://chromeenterprise.google/policies/managed-bookmarks/" rel="noopener">Chrome Enterprise — ManagedBookmarks</a>
+    </p>
+  </div>
+</section>

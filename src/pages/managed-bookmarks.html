@@ -1,0 +1,120 @@
+<h1>管理対象ブックマーク生成（Edge / Chrome）</h1>
+<p class="lead">ブラウザの管理用ブックマークを、フォルダツリーを編集するだけで生成します。
+<b>Edge の <code class="mono">ManagedFavorites</code> と Chrome の <code class="mono">ManagedBookmarks</code> は JSON スキーマが完全同一</b>なので、一度作ればターゲットの切り替えだけで両方に使えます。</p>
+
+<section class="panel">
+  <div class="field">
+    <span class="lb">展開対象ブラウザ</span>
+    <div class="seg" role="group" aria-label="展開対象ブラウザ">
+      <button type="button" class="seg-btn on" data-t="edge" aria-pressed="true">Microsoft Edge</button>
+      <button type="button" class="seg-btn" data-t="chrome" aria-pressed="false">Google Chrome</button>
+    </div>
+    <p class="sub" style="margin:9px 0 0">
+      ポリシー名: <b class="mono" id="polName">ManagedFavorites</b>　／
+      Windows レジストリ: <b class="mono" id="polWin">SOFTWARE\Policies\Microsoft\Edge</b>　／
+      macOS: <b class="mono" id="polMac">com.microsoft.Edge</b>
+    </p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="field">
+    <label for="topName">トップフォルダ名（<code class="mono">toplevel_name</code>）</label>
+    <input type="text" id="topName" placeholder="Managed favorites">
+    <p class="sub" style="margin:7px 0 0">未指定だと各ブラウザの既定名になります。ユーザーはこのフォルダを<b>変更できません</b>（ブックマークバーから非表示にはできます）。</p>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="row" style="margin-bottom:14px">
+    <button id="ab" class="primary">＋ ブックマーク</button>
+    <button id="af">＋ フォルダ</button>
+    <button id="clear">全消去</button>
+    <span class="sub">フォルダの「＋🔖／＋📁」で中に入れ子にできます</span>
+  </div>
+  <div id="tree"></div>
+</section>
+
+<section class="panel">
+  <div id="validation" class="valid"></div>
+  <div class="field" style="margin-top:12px">
+    <label for="out">JSON　<span class="sub">— 編集可。既存のポリシー JSON を貼り付ければ上のツリーへ反映されます</span></label>
+    <textarea id="out" class="mono" style="min-height:280px" spellcheck="false"></textarea>
+  </div>
+  <div class="row">
+    <button id="cp" class="primary">JSON をコピー</button>
+    <button id="dl">ManagedFavorites.json 保存</button>
+    <label class="filebtn"><input type="file" id="impFile" accept=".json,application/json" hidden>ファイルを読み込む</label>
+    <span class="sub" id="impName"></span>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 10px">スキーマの構造（Edge / Chrome 共通）</h2>
+  <p style="font-size:.86rem;margin:0 0 8px">配列の各要素が以下のいずれかです。<b>フォルダは <code class="mono">url</code> キーを持たず、代わりに <code class="mono">children</code> を持ちます</b>（この区別が必須）。</p>
+  <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+    <thead><tr style="color:var(--mut);text-align:left">
+      <th style="padding:8px;border-bottom:1px solid var(--line)">キー</th><th style="padding:8px;border-bottom:1px solid var(--line)">意味</th>
+    </tr></thead>
+    <tbody>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">toplevel_name</td><td style="padding:8px;border-bottom:1px solid var(--line)">格納フォルダ名（配列中どこか1つ）</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">name + url</td><td style="padding:8px;border-bottom:1px solid var(--line)">ブックマーク</td></tr>
+      <tr><td class="mono" style="padding:8px;border-bottom:1px solid var(--line)">name + children</td><td style="padding:8px;border-bottom:1px solid var(--line)">サブフォルダ（入れ子は再帰的に可能）</td></tr>
+    </tbody>
+  </table>
+  <p class="sub" style="margin:10px 0 0">
+    URL はスキーム無しでもブラウザがアドレスバーと同じ補完をします（<code class="mono">example.com</code> → <code class="mono">https://example.com/</code>）。
+  </p>
+</section>
+
+<section class="panel warnbox">
+  <h2 style="font-size:1rem;margin:0 0 8px">⚠ 展開前に必ず知っておくこと</h2>
+  <p class="sub" style="margin:0 0 10px">共通事項：<b>ユーザーアカウントへ同期されず</b>、拡張機能からの変更もできません。ユーザーはフォルダを<b>非表示にできます</b>（検知不可）。</p>
+
+  <div data-for="edge">
+    <ul style="font-size:.86rem;margin:0;padding-left:20px">
+      <li><b>「推奨」ポリシーでは使えません</b> — mandatory（必須）のみ。Intune で「推奨値」としての構成は<b>サポート外</b>です</li>
+      <li><b>Microsoft アカウントでサインイン中のプロファイルには適用されません</b> — Edge 116 以降の制限。<b>Entra ID joined / WorkProfile 前提</b>で設計してください</li>
+      <li><b>対応バージョン</b> — Windows / macOS ≥ 77 ／ Android ≥ 30 ／ iOS ≥ 85</li>
+      <li><b>動的ポリシー反映</b> — 対応。再ログインを待たずに反映されます</li>
+    </ul>
+  </div>
+
+  <div data-for="chrome" hidden>
+    <ul style="font-size:.86rem;margin:0;padding-left:20px">
+      <li><b>前提として「管理下であること」が必要</b> — Chrome は<b>管理登録されていないマシンではポリシーを読みません</b>。レジストリや管理設定を書いても無効です。先に <b>Chrome Browser Cloud Management</b> またはオンプレ管理（GPO / 管理設定）へ登録してください</li>
+      <li><b>ドメイン参加だけでは足りません</b> — Chrome は管理元を検出してからポリシーを適用します（<code class="mono">chrome://policy</code> で反映状況を確認できます）</li>
+      <li><b>対応バージョン</b> — Chrome ≥ 37 ／ ChromeOS ≥ 37 ／ Android ≥ 30 ／ iOS ≥ 88</li>
+      <li><b>動的ポリシー反映</b> — 対応 ／ プロファイル単位適用 — 対応</li>
+      <li><b>個人 Google アカウントのプロファイル</b> — 管理がブラウザ単位のため、個人用プロファイルにも適用され得ます。分離したい場合はプロファイル管理を別途設計してください</li>
+    </ul>
+  </div>
+</section>
+
+<section class="panel">
+  <h2 style="font-size:1rem;margin:0 0 8px">展開先</h2>
+
+  <div data-for="edge">
+    <ol style="font-size:.86rem;margin:0;padding-left:20px">
+      <li>Intune 管理センター → <b>デバイス → 構成ポリシー → 作成 → Windows 10以降</b></li>
+      <li>設定カタログを検索: <b>「お気に入りの構成」／「Configure favorites」</b>（<code class="mono">ManagedFavorites</code>）</li>
+      <li>生成した JSON を貼り付け → 対象グループに割り当て</li>
+    </ol>
+    <p class="sub" style="margin:10px 0 0">
+      参考: <a href="https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies/managedfavorites" rel="noopener">Microsoft Learn — ManagedFavorites policy</a>
+    </p>
+  </div>
+
+  <div data-for="chrome" hidden>
+    <ol style="font-size:.86rem;margin:0;padding-left:20px">
+      <li>Google Admin コンソール → <b>デバイス → Chrome → 設定 → ユーザーおよびブラウザの設定</b></li>
+      <li>検索で <b>「管理対象のブックマーク」／「Managed bookmarks」</b>（<code class="mono">ManagedBookmarks</code>）を選択</li>
+      <li>生成した JSON を貼り付け → 対象組織ユニットに適用</li>
+    </ol>
+    <p class="sub" style="margin:10px 0 0">
+      オンプレ管理の場合は <code class="mono">chrome.admx</code>（GPO）または macOS の管理設定 <code class="mono">com.google.Chrome</code> を使用。<br>
+      反映の確認はクライアントで <code class="mono">chrome://policy</code> を開いてください。
+      参考: <a href="https://chromeenterprise.google/policies/managed-bookmarks/" rel="noopener">Chrome Enterprise — ManagedBookmarks</a>
+    </p>
+  </div>
+</section>

@@ -59,9 +59,9 @@ const TOOLS = [
   { slug: "password", files: ["password-core", "password-app"], meta: {
       ja: { title: "パスワード一括生成｜便利ツール", desc: "暗号学的乱数で複数パスワードを一括生成。個数・文字数・文字種を指定でき、生成処理はブラウザ内で完結します。" },
       en: { title: "Bulk Password Generator", desc: "Generate many passwords from a cryptographic RNG. Set count, length and character classes; generation completes in your browser." } } },
-  { slug: "edge-favorites", files: ["edge-favorites-core", "edge-favorites"], meta: {
-      ja: { title: "Edge マネージドお気に入り生成｜便利ツール", desc: "Microsoft Edge の ManagedFavorites ポリシー用 JSON をフォルダツリー編集で生成。Intune 設定カタログにそのまま投入できます。" },
-      en: { title: "Edge Managed Favorites Generator", desc: "Build Microsoft Edge ManagedFavorites policy JSON with a folder-tree editor, ready for the Intune settings catalog." } } },
+  { slug: "managed-bookmarks", files: ["managed-bookmarks-core", "managed-bookmarks"], meta: {
+      ja: { title: "管理対象ブックマーク生成（Edge / Chrome）｜便利ツール", desc: "Edge の ManagedFavorites と Chrome の ManagedBookmarks 用 JSON をフォルダツリー編集で生成。両者同一スキーマなのでターゲット切替だけで使えます。" },
+      en: { title: "Managed Bookmarks Generator (Edge / Chrome)", desc: "Build Edge ManagedFavorites and Chrome ManagedBookmarks policy JSON with a folder-tree editor. Identical schema, so switching target is all it takes." } } },
 ];
 
 rmSync(OUT, { recursive: true, force: true });
@@ -130,6 +130,33 @@ for (const c of TRAVEL_OLD) {
 `);
 }
 made.push("travel/ → / へリダイレクト ×11");
+
+// ── 旧 edge-favorites URL → 統合ページへリダイレクト ──
+// 旧: /edge-favorites/ , /en/edge-favorites/
+// 新: /managed-bookmarks/ , /managed-bookmarks/
+for (const [from, to] of [["edge-favorites/", "/managed-bookmarks/"], ["en/edge-favorites/", "/managed-bookmarks/"]]) {
+  mkdirSync(join(OUT, from), { recursive: true });
+  const isEn = from.startsWith("en/");
+  writeFileSync(join(OUT, from, "index.html"), `<!doctype html>
+<html lang="${isEn ? "en" : "ja"}">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="0; url=${to}">
+<link rel="canonical" href="https://tools.wicachi.com${to}">
+<link rel="alternate" hreflang="${isEn ? "ja" : "en"}" href="https://tools.wicachi.com/managed-bookmarks/">
+<link rel="alternate" hreflang="${isEn ? "en" : "ja"}" href="https://tools.wicachi.com/managed-bookmarks/">
+<meta name="robots" content="noindex">
+<title>${isEn ? "Moved: Managed Bookmarks (Edge / Chrome)" : "移動しました：管理対象ブックマーク（Edge / Chrome）"}</title>
+</head>
+<body>
+<p>${isEn
+  ? `This tool now covers Edge and Chrome together. <a href="${to}">Go to Managed Bookmarks</a>`
+  : `このツールは Edge / Chrome を統合して扱います。<a href="${to}">管理対象ブックマークへ移動</a>`}</p>
+</body>
+</html>
+`);
+}
+made.push("edge-favorites/ → managed-bookmarks/ へリダイレクト ×2");
 
 const total = made.reduce((a, f) => {
   const p = join(OUT, f.replace(/.*\+.*$/, "index.html"));

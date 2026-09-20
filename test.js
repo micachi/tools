@@ -13,7 +13,7 @@ const ok = (name, cond, extra = "") => {
 };
 
 console.log("\n=== 1. 成果物の存在 ===");
-const SLUGS = ["qr", "mojicount", "color", "json", "unit", "datecalc", "intunestart", "password", "edge-favorites"];
+const SLUGS = ["qr", "mojicount", "color", "json", "unit", "datecalc", "intunestart", "password", "managed-bookmarks"];
 const pages = ["index.html", "en/index.html"]
   .concat(SLUGS.map((s) => `${s}/index.html`))
   .concat(SLUGS.map((s) => `en/${s}/index.html`));
@@ -38,7 +38,7 @@ console.log("\n=== 1b. 新ツールの必須要素 ===");
 
 console.log("\n=== 2. 相互リンク構造（全ページが他全ページへ参照） ===");
 const targets = ["qr/", "mojicount/", "color/", "json/", "unit/", "datecalc/",
-                "intunestart/", "password/", "edge-favorites/"];
+                "intunestart/", "password/", "managed-bookmarks/"];
 for (const p of pages) {
   const h = fs.readFileSync(path.join(DIST, p), "utf8");
   const missing = targets.filter((t) => !h.includes(t));
@@ -234,7 +234,7 @@ console.log("\n=== 9. DOM ID 整合性（JS が参照する id が HTML に実�
   const fs2 = require("fs");
   const jsDir = path.join(__dirname, "src", "js");
   const pgDir = path.join(__dirname, "src", "pages");
-  const skip = ["intunestart-core.js", "password-core.js", "password-app.js", "edge-favorites-core.js"]; // DOM 非依存 or 複数ファイル構成
+  const skip = ["intunestart-core.js", "password-core.js", "password-app.js", "managed-bookmarks-core.js"]; // DOM 非依存 or 複数ファイル構成
 
   const jsFiles = fs2.readdirSync(jsDir).filter((f) => f.endsWith(".js") && !skip.includes(f));
   ok("対象 JS を検出", jsFiles.length >= 7, jsFiles.length + " 件");
@@ -338,72 +338,72 @@ console.log("\n=== 13. 矛盾文言ガード（AdSense 有効下で「広告な�
 
 console.log("\n=== 14. Edge ManagedFavorites 生成 ===");
 {
-  const EFS = require(path.join(__dirname, "src", "js", "edge-favorites-core.js"));
+  const MBK = require(path.join(__dirname, "src", "js", "managed-bookmarks-core.js"));
 
   const tree = [
-    EFS.bookmark("社内ポータル", "intranet.example.co.jp"),
-    EFS.folder("業務", [
-      EFS.bookmark("勤怠", "krouter.example.co.jp"),
-      EFS.folder("深層", [EFS.bookmark("深い", "deep.example.co.jp")]),
+    MBK.bookmark("社内ポータル", "intranet.example.co.jp"),
+    MBK.folder("業務", [
+      MBK.bookmark("勤怠", "krouter.example.co.jp"),
+      MBK.folder("深層", [MBK.bookmark("深い", "deep.example.co.jp")]),
     ]),
   ];
-  const arr = EFS.build(tree, "会社指定");
+  const arr = MBK.build(tree, "会社指定");
 
   ok("1要素目が toplevel_name", arr[0].toplevel_name === "会社指定");
-  ok("既定名に切り替わる", EFS.build(tree, "")[0].toplevel_name === EFS.DEFAULT_TOP);
+  ok("既定名に切り替わる", MBK.build(tree, "")[0].toplevel_name === MBK.TARGETS.edge.defaultTop);
   ok("ブックマークは name+url のみ",
     JSON.stringify(Object.keys(arr[1]).sort()) === JSON.stringify(["name", "url"]));
   ok("フォルダは name+children のみ（url を持たない）",
     JSON.stringify(Object.keys(arr[2]).sort()) === JSON.stringify(["children", "name"]));
   ok("入れ子が再帰的に変換されている",
     arr[2].children[1].children[0].name === "深い");
-  ok("往復整合", EFS.roundTripOk(arr));
-  ok("JSON 再パース可能", JSON.parse(EFS.toJson(arr)).length === 3);
+  ok("往復整合", MBK.roundTripOk(arr));
+  ok("JSON 再パース可能", JSON.parse(MBK.toJson(arr)).length === 3);
 
-  const st = EFS.stats(tree);
+  const st = MBK.stats(tree);
   ok("統計が正しい", st.bookmarks === 3 && st.folders === 2 && st.maxDepth === 3,
     `bm=${st.bookmarks} fd=${st.folders} depth=${st.maxDepth}`);
 
   // 検証
-  ok("正常系でエラーなし", EFS.validate(tree, "x").length === 0, JSON.stringify(EFS.validate(tree, "x")));
-  ok("空ツリーを検出", EFS.validate([], "x").length > 0);
-  ok("名前なしを検出", EFS.validateNode(EFS.bookmark("", "a.com"), "t", []).length > 0);
-  ok("URL なしを検出", EFS.validateNode(EFS.bookmark("x", ""), "t", []).length > 0);
-  ok("URL の空白を検出", EFS.validateNode(EFS.bookmark("x", "a b.com"), "t", []).length > 0);
-  ok("javascript: URL を拒否", EFS.validateNode(EFS.bookmark("x", "javascript:alert(1)"), "t", []).length > 0);
-  ok("ドットもスキームもない URL を検出", EFS.validateNode(EFS.bookmark("x", "localhost"), "t", []).length > 0);
-  ok("フォルダに url を付けたらエラー", EFS.validateNode({ type: "folder", name: "f", url: "a.com", children: [EFS.bookmark("a", "b.com")] }, "t", []).length > 0);
-  ok("空フォルダを検出", EFS.validateNode(EFS.folder("空"), "t", []).length > 0);
-  ok("about: / file: スキームは許容", EFS.validateNode(EFS.bookmark("x", "about:blank"), "t", []).length === 0);
+  ok("正常系でエラーなし", MBK.validate(tree, "x").length === 0, JSON.stringify(MBK.validate(tree, "x")));
+  ok("空ツリーを検出", MBK.validate([], "x").length > 0);
+  ok("名前なしを検出", MBK.validateNode(MBK.bookmark("", "a.com"), "t", []).length > 0);
+  ok("URL なしを検出", MBK.validateNode(MBK.bookmark("x", ""), "t", []).length > 0);
+  ok("URL の空白を検出", MBK.validateNode(MBK.bookmark("x", "a b.com"), "t", []).length > 0);
+  ok("javascript: URL を拒否", MBK.validateNode(MBK.bookmark("x", "javascript:alert(1)"), "t", []).length > 0);
+  ok("ドットもスキームもない URL を検出", MBK.validateNode(MBK.bookmark("x", "localhost"), "t", []).length > 0);
+  ok("フォルダに url を付けたらエラー", MBK.validateNode({ type: "folder", name: "f", url: "a.com", children: [MBK.bookmark("a", "b.com")] }, "t", []).length > 0);
+  ok("空フォルダを検出", MBK.validateNode(MBK.folder("空"), "t", []).length > 0);
+  ok("about: / file: スキームは許容", MBK.validateNode(MBK.bookmark("x", "about:blank"), "t", []).length === 0);
 
   // 公式例がそのまま通ること
   const official = [
-    EFS.bookmark("Microsoft", "microsoft.com"),
-    EFS.bookmark("Bing", "bing.com"),
-    EFS.folder("Microsoft Edge links", [
-      EFS.bookmark("Microsoft Edge Insiders", "www.microsoftedgeinsider.com"),
-      EFS.bookmark("Microsoft Edge", "www.microsoft.com/windows/microsoft-edge"),
+    MBK.bookmark("Microsoft", "microsoft.com"),
+    MBK.bookmark("Bing", "bing.com"),
+    MBK.folder("Microsoft Edge links", [
+      MBK.bookmark("Microsoft Edge Insiders", "www.microsoftedgeinsider.com"),
+      MBK.bookmark("Microsoft Edge", "www.microsoft.com/windows/microsoft-edge"),
     ]),
   ];
-  ok("公式ドキュメント例が検証を通過", EFS.validate(official, "My managed favorites folder").length === 0,
-    JSON.stringify(EFS.validate(official, "x")));
-  const oa = EFS.build(official, "My managed favorites folder");
+  ok("公式ドキュメント例が検証を通過", MBK.validate(official, "My managed favorites folder").length === 0,
+    JSON.stringify(MBK.validate(official, "x")));
+  const oa = MBK.build(official, "My managed favorites folder");
   ok("公式例の JSON が構造一致",
     oa[0].toplevel_name === "My managed favorites folder" && oa[3].children.length === 2);
 }
 
 console.log("\n=== 15. インポート（往復変換の可逆性） ===");
 {
-  const EFS = require(path.join(__dirname, "src", "js", "edge-favorites-core.js"));
+  const MBK = require(path.join(__dirname, "src", "js", "managed-bookmarks-core.js"));
   const IJS = require(path.join(__dirname, "src", "js", "intunestart-core.js"));
 
   /* --- Edge ManagedFavorites --- */
   const t1 = [
-    EFS.bookmark("A", "a.example.com"),
-    EFS.folder("F", [EFS.bookmark("B", "b.example.com"), EFS.folder("G", [EFS.bookmark("C", "c.example.com")])]),
+    MBK.bookmark("A", "a.example.com"),
+    MBK.folder("F", [MBK.bookmark("B", "b.example.com"), MBK.folder("G", [MBK.bookmark("C", "c.example.com")])]),
   ];
-  const j1 = EFS.toJson(EFS.build(t1, "テストフォルダ"));
-  const r1 = EFS.fromJson(j1);
+  const j1 = MBK.toJson(MBK.build(t1, "テストフォルダ"));
+  const r1 = MBK.fromJson(j1);
   ok("Edge: 往復でツリー構造が一致",
     JSON.stringify(r1.tree) === JSON.stringify(t1),
     JSON.stringify(r1.tree).slice(0, 60));
@@ -412,14 +412,14 @@ console.log("\n=== 15. インポート（往復変換の可逆性） ===");
 
   // 公式例のインポート
   const officialJson = '[{"toplevel_name":"My managed favorites folder"},{"name":"Microsoft","url":"microsoft.com"},{"name":"Bing","url":"bing.com"},{"children":[{"name":"Microsoft Edge Insiders","url":"www.microsoftedgeinsider.com"},{"name":"Microsoft Edge","url":"www.microsoft.com/windows/microsoft-edge"}],"name":"Microsoft Edge links"}]';
-  const ro = EFS.fromJson(officialJson);
+  const ro = MBK.fromJson(officialJson);
   ok("Edge: 公式例をインポートできる", ro.tree.length === 3 && ro.toplevelName === "My managed favorites folder");
   ok("Edge: 公式例の入れ子が復元", ro.tree[2].children.length === 2 && ro.tree[2].type === "folder");
 
-  ok("Edge: 不正 JSON で例外", (() => { try { EFS.fromJson("{bad"); return false; } catch { return true; } })());
-  ok("Edge: 配列以外で例外", (() => { try { EFS.fromJson('{"a":1}'); return false; } catch { return true; } })());
-  ok("Edge: 空配列で例外", (() => { try { EFS.fromJson("[]"); return false; } catch { return true; } })());
-  const rw = EFS.fromJson('[{"toplevel_name":"x"},{"name":"urlもchildrenも無い"}]');
+  ok("Edge: 不正 JSON で例外", (() => { try { MBK.fromJson("{bad"); return false; } catch { return true; } })());
+  ok("Edge: 配列以外で例外", (() => { try { MBK.fromJson('{"a":1}'); return false; } catch { return true; } })());
+  ok("Edge: 空配列で例外", (() => { try { MBK.fromJson("[]"); return false; } catch { return true; } })());
+  const rw = MBK.fromJson('[{"toplevel_name":"x"},{"name":"urlもchildrenも無い"}]');
   ok("Edge: 不明項目は警告付きでフォルダ扱い", rw.warnings.length > 0 && rw.tree.length === 1,
     rw.warnings.join("|"));
 
@@ -596,6 +596,72 @@ console.log("\n=== 19. 広告回避・追跡回避の誘導文言を書かない
     if (!/Cookie|cookie/.test(h)) noData.push(p);
   }
   ok("Cookie が送信される事も開示中", noData.length === 0, noData.join(",") || "OK");
+}
+
+console.log("\n=== 20. Chrome ManagedBookmarks 対応 ===");
+{
+  const MBK = require(path.join(__dirname, "src", "js", "managed-bookmarks-core.js"));
+  const read = (p) => fs.readFileSync(path.join(DIST, p), "utf8");
+
+  /* --- ターゲット定義 --- */
+  ok("TARGETS に edge / chrome の両方", Object.keys(MBK.TARGETS).sort().join(",") === "chrome,edge");
+  ok("Edge ポリシー名", MBK.TARGETS.edge.policy === "ManagedFavorites");
+  ok("Chrome ポリシー名", MBK.TARGETS.chrome.policy === "ManagedBookmarks");
+  ok("Edge レジストリパス", MBK.TARGETS.edge.winReg === "SOFTWARE\\Policies\\Microsoft\\Edge");
+  ok("Chrome レジストリパス", MBK.TARGETS.chrome.winReg === "SOFTWARE\\Policies\\Google\\Chrome");
+  ok("Chrome macOS ドメイン", MBK.TARGETS.chrome.macDomain === "com.google.Chrome");
+  ok("Chrome は管理登録が前提（needsEnrollment）", MBK.TARGETS.chrome.needsEnrollment === true);
+  ok("Edge は追加登録不要", MBK.TARGETS.edge.needsEnrollment === false);
+  ok("未知ターゲットは例外",
+    (() => { try { MBK.target("safari"); return false; } catch { return true; } })());
+
+  /* --- Chrome 公式例が検証を通過 --- */
+  const chromeOfficial = '[{"toplevel_name":"My managed bookmarks folder"},{"name":"Google","url":"google.com"},{"name":"Youtube","url":"youtube.com"},{"children":[{"name":"Chromium","url":"chromium.org"},{"name":"Chromium Developers","url":"dev.chromium.org"}],"name":"Chrome links"}]';
+  const ci = MBK.fromJson(chromeOfficial);
+  ok("Chrome 公式例をインポートできる", ci.tree.length === 3 && ci.toplevelName === "My managed bookmarks folder");
+  ok("Chrome 公式例の入れ子が復元", ci.tree[2].type === "folder" && ci.tree[2].children.length === 2);
+  ok("Chrome 公式例に警告なし", ci.warnings.length === 0, JSON.stringify(ci.warnings));
+  ok("Chrome 公式例が検証通過", MBK.validate(ci.tree, ci.toplevelName).length === 0,
+    JSON.stringify(MBK.validate(ci.tree, ci.toplevelName)));
+
+  /* --- スキーマ同一性：同じツリーが両ターゲットで有効 --- */
+  const shared = [
+    MBK.bookmark("portal", "intranet.example.com"),
+    MBK.folder("sys", [MBK.bookmark("kintai", "krouter.example.com")]),
+  ];
+  const asEdge = MBK.build(shared, "", "edge");
+  const asChrome = MBK.build(shared, "", "chrome");
+  ok("既定トップ名がターゲットで切り替わる",
+    asEdge[0].toplevel_name === "Managed favorites" && asChrome[0].toplevel_name === "Managed bookmarks");
+  ok("既定名以外は完全一致（スキーマ同一）",
+    JSON.stringify(asEdge.slice(1)) === JSON.stringify(asChrome.slice(1)));
+
+  /* --- 相互運用：Edge JSON を Chrome ツリーとして読める（逆も） --- */
+  const edgeJson = MBK.toJson(MBK.build(shared, "会社指定", "edge"));
+  const reimport = MBK.fromJson(edgeJson);
+  ok("Edge 出力をそのまま Chrome 用として再投入できる",
+    MBK.validate(reimport.tree, reimport.toplevelName).length === 0 &&
+    JSON.stringify(MBK.build(reimport.tree, reimport.toplevelName, "chrome").slice(1)) ===
+    JSON.stringify(asChrome.slice(1)));
+
+  /* --- ページの切替 UI --- */
+  for (const p of ["managed-bookmarks/index.html", "en/managed-bookmarks/index.html"]) {
+    const h = read(p);
+    ok(`${p}: Edge / Chrome のセグメント切替がある`,
+      h.includes('data-t="edge"') && h.includes('data-t="chrome"'));
+    ok(`${p}: 両ターゲットの展開手順パネルがある`,
+      h.includes('data-for="edge"') && h.includes('data-for="chrome"'));
+    ok(`${p}: 両ポリシー名を掲載`, h.includes("ManagedFavorites") && h.includes("ManagedBookmarks"));
+    ok(`${p}: Chrome の管理登録前提を明記`,
+      /管理登録|not enrolled|managed first|管理下/.test(h));
+    ok(`${p}: chrome://policy への誘導あり`, h.includes("chrome://policy"));
+  }
+
+  /* --- 旧 URL のリダイレクト --- */
+  for (const old of ["edge-favorites/index.html", "en/edge-favorites/index.html"]) {
+    const h = read(old);
+    ok(`${old}: 新ページへリダイレクト`, h.includes('url=/managed-bookmarks/') && h.includes('content="noindex"'));
+  }
 }
 
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);

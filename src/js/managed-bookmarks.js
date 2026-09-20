@@ -6,6 +6,8 @@
   let tree = [];
   // 双方向バインディングのループ防止: プログラムによる書き込み中は input ハンドラを止める
   let syncing = false;
+  // 展開対象ブラウザ（スキーマ同一なのでツリーはそのまま切り替えられる）
+  let target = "edge";
 
   const L = __loc({
     ja: {
@@ -19,7 +21,8 @@
       keepTree: "※ 既存のツリーは保持しています。JSON を直すと再取り込みします。",
       warn: "注意", importedErr: (n) => `⚠ 取り込んだが検証エラー ${n} 件`, imported: "✓ JSON から取り込みました",
       copied: "✓ コピー完了", copy: "JSON をコピー", fileFail: "✕ ファイルを読み込めませんでした",
-      top0: "会社指定のお気に入り",
+      policyIs: (p) => `ポリシー名: ${p}`,
+      top0: "会社指定のブックマーク",
       b1: "社内ポータル", b2: "Webメール", f1: "業務システム", f1a: "勤怠", f1b: "経費精算",
       f2: "ナレッジ", f2a: "社内 Wiki", f2b: "マニュアル",
     },
@@ -34,7 +37,8 @@
       keepTree: "※ Your existing tree is kept. Fix the JSON and it will import again.",
       warn: "Warning", importedErr: (n) => `⚠ Imported but ${n} validation error(s)`, imported: "✓ Imported from JSON",
       copied: "✓ Copied", copy: "Copy JSON", fileFail: "✕ Could not read the file",
-      top0: "Company favorites",
+      policyIs: (p) => `Policy name: ${p}`,
+      top0: "Company bookmarks",
       b1: "Company portal", b2: "Web mail", f1: "Business systems", f1a: "Time & attendance", f1b: "Expense claims",
       f2: "Knowledge", f2a: "Internal wiki", f2b: "Manuals",
     },
@@ -46,8 +50,8 @@
     for (const i of path) list = list[i].children;
     return list;
   }
-  function addBookmark(path, name = "", url = "") { getAt(tree, path).push(EFS.bookmark(name, url)); render(); }
-  function addFolder(path, name = L.newFolder) { getAt(tree, path).push(EFS.folder(name, [])); render(); }
+  function addBookmark(path, name = "", url = "") { getAt(tree, path).push(MBK.bookmark(name, url)); render(); }
+  function addFolder(path, name = L.newFolder) { getAt(tree, path).push(MBK.folder(name, [])); render(); }
   function remove(path) {
     getAt(tree, path.slice(0, -1)).splice(path[path.length - 1], 1);
     render();
@@ -117,18 +121,18 @@
   /** ツリー → JSON（出力欄へ書き込む） */
   function renderOut() {
     const top = $("topName").value;
-    const errs = EFS.validate(tree, top);
+    const errs = MBK.validate(tree, top);
     if (errs.length) {
       setStatus(false, `<b>${L.errCount(errs.length)}</b><ul>${errs.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>`);
       return;
     }
-    const arr = EFS.build(tree, top);
-    const ok = EFS.roundTripOk(arr);
-    const st = EFS.stats(tree);
+    const arr = MBK.build(tree, top, target);
+    const ok = MBK.roundTripOk(arr);
+    const st = MBK.stats(tree);
     setStatus(ok, `<b>${ok ? L.pass : L.rtErr}</b>　<span class="sub">${L.stat(st.bookmarks, st.folders, st.maxDepth)}</span>`);
     if (ok) {
       syncing = true;
-      $("out").value = EFS.toJson(arr);
+      $("out").value = MBK.toJson(arr);
       syncing = false;
     }
   }
@@ -140,20 +144,19 @@
     if (!txt.trim()) { setStatus(false, `<b>${L.empty}</b>`); return; }
     let r;
     try {
-      r = EFS.fromJson(txt);
+      r = MBK.fromJson(txt);
     } catch (e) {
       setStatus(false, `<b>${L.impFail}</b><ul><li>${esc(e.message || e)}</li></ul><span class="sub">${L.keepTree}</span>`);
       return;
     }
-    // 取り込み成功 → ツリーとトップフォルダ名を差し替え（JSON 欄のテキストはそのまま維持）
     tree = r.tree;
     syncing = true;
     $("topName").value = r.toplevelName || "";
     syncing = false;
     renderTree();
 
-    const errs = EFS.validate(tree, r.toplevelName);
-    const st = EFS.stats(tree);
+    const errs = MBK.validate(tree, r.toplevelName);
+    const st = MBK.stats(tree);
     const warn = r.warnings.length
       ? `<br><span class="sub">${L.warn}: ${r.warnings.map(esc).join(" ／ ")}</span>` : "";
     if (errs.length) {
@@ -165,13 +168,50 @@
 
   function render() { renderTree(); renderOut(); }
 
+  /* ---- 対象ブラウザの切替 ----
+     Edge / Chrome はスキーマが同一なので、ツリーはそのままに
+     「ポリシー名・既定フォルダ名・保存ファイル名・展開手順」だけ差し替える。 */
+  function setTarget(next) {
+    target = next;
+    const t = MBK.target(next);
+
+    // 前ターゲットの既定名のままなら、新ターゲットの既定名に追従させる
+    const cur = $("topName").value.trim();
+    const allDefaults = Object.values(MBK.TARGETS).map((x) => x.defaultTop);
+    syncing = true;
+    if (!cur || allDefaults.includes(cur)) $("topName").value = t.defaultTop;
+    syncing = false;
+
+    $("polName").textContent = t.policy;
+    $("polWin").textContent = t.winReg;
+    $("polMac").textContent = t.macDomain;
+    $("dl").textContent = (LANG_IS_EN ? "Save " : "") + t.file;
+
+    // 展開手順パネルの出し分け
+    document.querySelectorAll("[data-for]").forEach((el) => {
+      el.hidden = el.dataset.for !== next;
+    });
+    // 共通の注意書きもターゲット文言へ
+    const tn = document.querySelectorAll(".tgtLabel");
+    tn.forEach((el) => { el.textContent = t.label; });
+
+    document.querySelectorAll(".seg-btn").forEach((b) => {
+      const on = b.dataset.t === next;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+
+    renderOut();
+  }
+
+  const LANG_IS_EN = (typeof document !== "undefined" && document.documentElement.getAttribute("lang") === "en");
+
   /* ---- イベント ---- */
   $("ab").addEventListener("click", () => addBookmark([]));
   $("af").addEventListener("click", () => addFolder([]));
   $("clear").addEventListener("click", () => { tree = []; render(); });
   $("topName").addEventListener("input", () => { if (!syncing) renderOut(); });
 
-  // JSON 欄は編集可。入力停止後にツリーへ反映
   let t = null;
   $("out").addEventListener("input", () => { clearTimeout(t); t = setTimeout(importFromOut, 400); });
 
@@ -183,7 +223,7 @@
     const blob = new Blob([$("out").value], { type: "application/json;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "ManagedFavorites.json";
+    a.download = MBK.target(target).file;
     a.click();
     URL.revokeObjectURL(a.href);
   });
@@ -199,20 +239,22 @@
     rd.onerror = () => setStatus(false, `<b>${L.fileFail}</b>`);
     rd.readAsText(f, "utf-8");
   });
+  document.querySelectorAll(".seg-btn").forEach((b) =>
+    b.addEventListener("click", () => setTarget(b.dataset.t)));
 
-  /* ---- 初期値（公式例をベースに実用形へ） ---- */
+  /* ---- 初期値 ---- */
   $("topName").value = L.top0;
   tree = [
-    EFS.bookmark(L.b1, "intranet.example.co.jp"),
-    EFS.bookmark(L.b2, "outlook.office.com"),
-    EFS.folder(L.f1, [
-      EFS.bookmark(L.f1a, "krouter.example.co.jp"),
-      EFS.bookmark(L.f1b, "expense.example.co.jp"),
+    MBK.bookmark(L.b1, "intranet.example.co.jp"),
+    MBK.bookmark(L.b2, "outlook.office.com"),
+    MBK.folder(L.f1, [
+      MBK.bookmark(L.f1a, "krouter.example.co.jp"),
+      MBK.bookmark(L.f1b, "expense.example.co.jp"),
     ]),
-    EFS.folder(L.f2, [
-      EFS.bookmark(L.f2a, "wiki.example.co.jp"),
-      EFS.bookmark(L.f2b, "docs.example.co.jp"),
+    MBK.folder(L.f2, [
+      MBK.bookmark(L.f2a, "wiki.example.co.jp"),
+      MBK.bookmark(L.f2b, "docs.example.co.jp"),
     ]),
   ];
-  render();
+  setTarget("edge");
 })();
