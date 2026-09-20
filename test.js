@@ -555,5 +555,48 @@ console.log("\n=== 18. 日付入力のスタイル適用 ===");
     /input\[type=date\][\s\S]{0,400}?font-variant-numeric:\s*tabular-nums/.test(css));
 }
 
+console.log("\n=== 19. 広告回避・追跡回避の誘導文言を書かない ===");
+{
+  const read = (p) => fs.readFileSync(path.join(DIST, p), "utf8");
+  // 「広告/追跡を回避する方法」を教える文言は収益・運用上意図的に置かない。
+  // 開示（広告がある／データが Google へ飛ぶ）自体は必須なので残す。
+  const FORBIDDEN = [
+    "追跡防止",
+    "広告ブロッカー",
+    "tracking-protection",
+    "tracking protection",
+    "ad blocker",
+    "adblock",
+    "オフラインでも動作",
+    "ネット無しでも",
+    "run offline",
+    "works offline",
+    "Save the page",
+    "save this page",
+    "ページを保存",
+  ];
+  const hits = [];
+  for (const p of pages) {
+    const h = read(p);
+    for (const w of FORBIDDEN) if (h.includes(w)) hits.push(`${p}: 「${w}」`);
+  }
+  ok("広告/追跡の回避手段を案内していない", hits.length === 0, hits.slice(0, 6).join(" / ") || "0 件");
+
+  // 一方で誠実な開示は維持されていること
+  const noAd = [];
+  for (const p of pages) {
+    const h = read(p);
+    if (!/AdSense/.test(h)) noAd.push(p);
+  }
+  ok("AdSense を使っている事実は全ページで開示中", noAd.length === 0, noAd.join(",") || "OK");
+
+  const noData = [];
+  for (const p of pages) {
+    const h = read(p);
+    if (!/Cookie|cookie/.test(h)) noData.push(p);
+  }
+  ok("Cookie が送信される事も開示中", noData.length === 0, noData.join(",") || "OK");
+}
+
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);
 process.exit(fail ? 1 : 0);

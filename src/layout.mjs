@@ -15,9 +15,9 @@ export const UI = {
     home: "/",
     adLabel: "広告",
     footHome: "🧰 ツール一覧",
-    footPrivacy: "ツールへ入力した内容はサーバーに送信されず、すべてブラウザ内で処理されます。ページを保存すればオフラインでも動作します。",
+    footPrivacy: "ツールへ入力した内容はサーバーに送信されず、すべてブラウザ内で処理されます。",
     footTrademark: "QR Code は DENSO WAVE INCORPORATED の登録商標です。QRコード生成に MIT ライセンスの qrcode-generator を使用しています。",
-    footAds: "<b>本サイトは Google AdSense を利用しています。</b>ページ閲覧・広告表示の際にページURL・リファラ・User-Agent・Cookie 等が Google へ送信され、サイト横断の広告配信に使われる可能性があります。非追跡を望む場合はブラウザの追跡防止機能をご利用ください。",
+    footAds: "<b>本サイトは Google AdSense を利用しています。</b>ページ閲覧・広告表示の際にページURL・リファラ・User-Agent・Cookie 等が Google へ送信され、サイト横断の広告配信に使われる可能性があります。",
     langSwitch: "English",
   },
   en: {
@@ -28,9 +28,9 @@ export const UI = {
     home: "/en/",
     adLabel: "Advertisement",
     footHome: "🧰 All tools",
-    footPrivacy: "Everything you type stays in your browser — your input is never sent to a server. Save the page and it keeps working offline.",
+    footPrivacy: "Everything you type stays in your browser — your input is never sent to a server.",
     footTrademark: "QR Code is a registered trademark of DENSO WAVE INCORPORATED. QR generation uses the MIT-licensed qrcode-generator.",
-    footAds: "<b>This site uses Google AdSense.</b> When you view a page, Google may receive the page URL, referrer, user agent and cookies, which may be used for cross-site ad targeting. Use your browser's tracking-protection feature if you prefer not to be tracked.",
+    footAds: "<b>This site uses Google AdSense.</b> When you view a page, Google may receive the page URL, referrer, user agent and cookies, which may be used for cross-site ad targeting.",
     langSwitch: "日本語",
   },
 };
