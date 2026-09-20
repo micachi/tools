@@ -769,6 +769,38 @@ console.log("\n=== 21. Intune 割り当てフィルター ルール生成 ===");
     IFT.build([{ entity: "device", prop: "deviceTrustType", op: "eq", values: [] }]) === "(device.deviceTrustType -eq)",
     IFT.build([{ entity: "device", prop: "deviceTrustType", op: "eq", values: [] }]));
 
+  /* --- 既存ルール取り込み（パース）の安全性 --- */
+  ok("入れ子は黙って平坦化せず拒否（or→and の論理反回帰）",
+    (() => { try { IFT.parse("(or (device.deviceName -eq \"A\") (device.manufacturer -eq \"Dell\"))"); return false; } catch (e) { return /入れ子|Nested/.test(e.message); } })());
+  ok("hasNesting が入れ子を検出する", IFT.hasNesting("(a (b))") && !IFT.hasNesting("(a) (b)"));
+  ok("値に ) を含んでも壊れない", IFT.parse("(device.deviceName -contains \"a)b\")")[0].values[0] === "a)b",
+    JSON.stringify(IFT.parse("(device.deviceName -contains \"a)b\")")[0].values));
+  ok("引用符のエスケープが往復する",
+    IFT.parse("(device.deviceName -eq \"say \\\"hi\\\"\")")[0].values[0] === 'say "hi"',
+    JSON.stringify(IFT.parse("(device.deviceName -eq \"say \\\"hi\\\"\")")[0].values));
+  ok("演算子表記を正規化（-STARTSWITH → startsWith）",
+    IFT.parse("(device.deviceName -STARTSWITH \"PC\")")[0].op === "startsWith");
+  ok("-NOTCONTAINS も正規化", IFT.parse("(device.model -NOTCONTAINS \"X\")")[0].op === "notContains");
+  ok("未知の演算子は黙さず例外", (() => { try { IFT.parse("(device.deviceName -foo \"x\")"); return false; } catch { return true; } })());
+  ok("往復（build→parse→build）が一致する（fuzz 64 パターン）", (() => {
+    const props = [
+      ["device", "manufacturer", "eq", ["Dell"]],
+      ["device", "operatingSystemVersion", "ge", ["10.0.22000"]],
+      ["device", "operatingSystemSKU", "in", ["Enterprise", "Education"]],
+      ["device", "isRooted", "ne", ["True"]],
+      ["device", "deviceName", "startsWith", ["PC"]],
+      ["app", "appVersion", "contains", ["1."]],
+    ];
+    for (let i = 0; i < 64; i++) {
+      const rules = props.slice(0, 1 + (i % props.length)).map(([entity, prop, op, values], k) =>
+        ({ entity, prop, op, values, join: k % 2 ? "or" : "and" }));
+      const s = IFT.build(rules);
+      const s2 = IFT.build(IFT.parse(s));
+      if (s !== s2) return false;
+    }
+    return true;
+  })());
+
   /* --- ページ --- */
   for (const p of ["intune-filter/index.html", "en/intune-filter/index.html"]) {
     const h = fs.readFileSync(path.join(DIST, p), "utf8");
@@ -832,6 +864,12 @@ console.log("\n=== 22. Win32 検出ルール生成 ===");
     W3D.psCheck({ type: "msi", productCode: "{2A1B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}" }).includes("HKCU:"));
   ok("msi: バージョン確認時に値未入力 を弾く",
     W3D.validateRule({ type: "msi", productCode: "{2A1B3C4D-5E6F-7A8B-9C0D-1E2F3A4B5C6D}", versionCheck: true }).length > 0);
+  ok("script 型（項目なし）を受け付けない — 空チェックで誤検出するため",
+    W3D.validate([{ type: "script" }]).length > 0 && !W3D.RULE_TYPES.script,
+    JSON.stringify(W3D.validate([{ type: "script" }])));
+  ok("エラーメッセージ内の例が HKLM\\Software の形を保つ",
+    W3D.validateRule({ type: "registry", keyPath: "HKLM\\SOFTWARE" }).join("").includes("HKLM\\Software\\Vendor\\App"),
+    W3D.validateRule({ type: "registry", keyPath: "HKLM\\SOFTWARE" }).join(""));
 
   const script = W3D.buildScript([
     msi,
@@ -858,6 +896,7 @@ console.log("\n=== 22. Win32 検出ルール生成 ===");
 
 console.log("\n=== 23. OMA-URI / Windows CSP 対応表 ===");
 {
+  const ioRead = (p) => fs.readFileSync(path.join(__dirname, p), "utf8");
   global.CSP_MAP = JSON.parse(fs.readFileSync(path.join(__dirname, "src", "csp-map.json"), "utf8"));
   const ICS = require(path.join(__dirname, "src", "js", "intune-csp-core.js"));
   ok("公式 Graph↔CSP 対応表 732 件", ICS.MAP.length === 732, String(ICS.MAP.length));
@@ -882,6 +921,10 @@ console.log("\n=== 23. OMA-URI / Windows CSP 対応表 ===");
   ok("検証: 正しい OMA-URI は通る",
     ICS.validateUri("./Device/Vendor/MSFT/Policy/Config/Defender/AttackSurfaceReductionRules").length === 0);
   ok("プレースホルダ {AADTenantId} を保持", ICS.search("AADTenantId").length === 11, String(ICS.search("AADTenantId").length));
+  ok("スコープ名がロケール分岐を持つ（EN 用に英語文字列を用意）",
+    /Vendor \(Device \/ User\)/.test(ioRead("src/js/intune-csp-core.js")) &&
+    ICS.scopeOf("./Vendor/MSFT/Policy") === "Vendor (User/Device 両対応)",
+    ICS.scopeOf("./Vendor/MSFT/Policy"));
   for (const p of ["intune-csp/index.html", "en/intune-csp/index.html"]) {
     const h = fs.readFileSync(path.join(DIST, p), "utf8");
     ok(`${p}: 検索欄と OMA-URI ビルダーがある`,

@@ -258,25 +258,52 @@ const IFT = (() => {
     return errs;
   }
 
+  /* 記号 → 正規キー（-startsWith / -STARTSWITH どちらも startsWith に正規化） */
+  const SYM2KEY = {};
+  Object.keys(OPS).forEach((k) => { SYM2KEY[OPS[k].sym.toLowerCase()] = k; });
+
+  /** 括弧の深さが 2 以上（入れ子）かどうか。簡易ビルダーでは表現できない */
+  function hasNesting(text) {
+    let depth = 0;
+    for (const ch of String(text)) {
+      if (ch === "(") { depth += 1; if (depth >= 2) return true; }
+      else if (ch === ")") depth -= 1;
+    }
+    return false;
+  }
+
   /* ── パース（既存ルールの取り込み） ──────────────────── */
   function parse(text) {
     if (!text || !text.trim()) throw new Error(EN ? "Empty rule" : "ルールが空です");
+    // 入れ子を黙って平坦化すると (or (A) (B)) が A and B に論理反転していた。
+    // 公式も入れ子使用時は簡易ビルダーを無効にするため、ここでは拒否する。
+    if (hasNesting(text)) {
+      throw new Error(EN
+        ? "Nested groups cannot be edited with the simple builder"
+        : "入れ子を含むルールは簡易ビルダーで編集できません（ルール構文のままご利用ください）");
+    }
     const rules = [];
-    // 各 () の直前に付いた and / or をその条件の結合子として取り込む
-    const re = /(?:(\band\b|\bor\b)\s+)?\(\s*([a-zA-Z]+)\.([a-zA-Z]+)\s+(-?[a-zA-Z]+)\s+(.+?)\s*\)/gi;
+    // 各 () の直前に付いた and / or をその条件の結合子として取り込む。
+    // 値は「引用符付き文字列 / 配列 / 空白と括弧を含まない単一トークン」に限定する
+    // （後方非貪欲マッチだと "a)b" の ) で切れて値が黙って壊れていた）
+    const re = /(?:(\band\b|\bor\b)\s+)?\(\s*([a-zA-Z]+)\.([a-zA-Z]+)\s+(-?[a-zA-Z]+)\s+("(?:[^"\\]|\\.)*"|\[[^\]]*\]|[^\s()]+)\s*\)/gi;
     let mm;
     while ((mm = re.exec(text)) !== null) {
       const entity = mm[2].toLowerCase();
       const prop = mm[3];
-      const opRaw = mm[4].replace(/^-/, "").toLowerCase();
+      const bare = mm[4].replace(/^-/, "");
+      const op = SYM2KEY["-" + bare.toLowerCase()];
+      if (!op) throw new Error(EN ? `Unknown operator -${bare}` : `未知の演算子 -${bare} です`);
       const valRaw = mm[5].trim();
       let values;
-      if (/^\[.*\]$/.test(valRaw)) {
+      if (valRaw.startsWith("[")) {
         values = valRaw.slice(1, -1).split(",").map((s) => s.trim().replace(/^"|"$/g, "")).filter((s) => s !== "");
+      } else if (valRaw.startsWith('"')) {
+        values = [valRaw.slice(1, -1).replace(/\\"/g, '"')];
       } else {
-        values = [valRaw.replace(/^"|"$/g, "")];
+        values = [valRaw];
       }
-      rules.push({ entity, prop, op: opRaw, values, join: mm[1] ? mm[1].toLowerCase() : "and" });
+      rules.push({ entity, prop, op, values, join: mm[1] ? mm[1].toLowerCase() : "and" });
     }
     if (!rules.length) throw new Error(EN ? "Could not parse any (entity.property op value) group" : "(entity.property 演算子 値) の形式で読み込めませんでした");
     rules[0].join = "and";
@@ -327,7 +354,8 @@ const IFT = (() => {
 
   return {
     OPS, PROPS, DEVICE_PROPS, APP_PROPS, PRESETS, LIMIT_CHARS,
-    propDef, propLabel, valueLabel, enumPropsMissingJa, renderRule, build, validate, parse,
+    propDef, propLabel, valueLabel, enumPropsMissingJa, hasNesting,
+    renderRule, build, validate, parse,
   };
 })();
 

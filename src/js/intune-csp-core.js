@@ -30,7 +30,7 @@ const ICS = (() => {
   function scopeOf(csp) {
     if (csp.startsWith("./Device/")) return "Device";
     if (csp.startsWith("./User/")) return "User";
-    if (csp.startsWith("./Vendor/MSFT/")) return "Vendor (User/Device 両対応)";
+    if (csp.startsWith("./Vendor/MSFT/")) return EN ? "Vendor (Device / User)" : "Vendor (User/Device 両対応)";
     return "?";
   }
 

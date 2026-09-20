@@ -6,23 +6,25 @@
 
   const L = EN ? {
     noData: "CSP mapping data is not loaded.",
-    hits: (n, total) => `${n} of ${total} mapping entries shown`,
+    hits: (n, total) => `${n} of ${total} entries matched`,
     none: "No entry matches the search.",
     scope: (s) => `Applies to: ${s}`,
     pass: "✓ Valid OMA-URI format",
     errCount: (n) => `✕ ${n} format error(s)`,
     copy: "Copy OMA-URI", copied: "✓ Copied",
     resultHead: (n) => `Search results (${n})`,
+    more: (n) => ` (showing top ${n})`,
     clickHint: "Click a row to load it into the builder below.",
   } : {
     noData: "CSP 対応データが読み込まれていません。",
-    hits: (n, total) => `対応表 ${total} 件のうち ${n} 件を表示`,
+    hits: (n, total) => `対応表 ${total} 件のうち ${n} 件ヒット`,
     none: "検索に一致する項目がありません。",
     scope: (s) => `適用スコープ: ${s}`,
     pass: "✓ OMA-URI 形式 OK",
     errCount: (n) => `✕ 形式エラー ${n} 件`,
     copy: "OMA-URI をコピー", copied: "✓ コピー完了",
     resultHead: (n) => `検索結果（${n} 件）`,
+    more: (n) => `（上位 ${n} 件を表示）`,
     clickHint: "行をクリックすると下のビルダーに読み込まれます。",
   };
 
@@ -86,9 +88,9 @@
     $("cp").disabled = !!errs.length;
   }
 
-  function renderResults(list) {
+  function renderResults(list, total) {
     const box = $("results");
-    if (!list.length) { box.innerHTML = `<p class="sub">${esc(L.none)}</p>`; return; }
+    if (!list.length) { box.innerHTML = `<p class="sub">${esc(L.none)}</p>`; $("hits").textContent = L.hits(0, ICS.MAP.length); return; }
     box.innerHTML = list.map((e) => `
       <div class="csprow" tabindex="0" role="button"
            data-csp="${esc(e.csp)}" data-off="${esc((e.offsets || [])[0] || "")}">
@@ -103,12 +105,15 @@
       el.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); load(); } });
     };
     box.querySelectorAll(".csprow").forEach(bind);
-    $("hits").textContent = L.hits(list.length, ICS.MAP.length);
+    // 「ヒット総数」を表示（表示枠で切った数をヒット数と誤解させない）
+    $("hits").textContent = L.hits(total != null ? total : list.length, ICS.MAP.length)
+      + (total != null && total > list.length ? L.more(list.length) : "");
   }
 
   $("q").addEventListener("input", () => {
     const q = $("q").value.trim();
-    renderResults(ICS.search(q, 60));
+    const all = ICS.search(q, 100000);
+    renderResults(all.slice(0, 60), all.length);
   });
 
   $("csp").addEventListener("change", () => fillOffsets());
@@ -128,5 +133,5 @@
   // 初期状態
   $("stats").textContent = L.hits(ICS.MAP.length, ICS.MAP.length) + `　·　${nodes.length} CSP nodes`;
   fillCsp(nodes[0] ? nodes[0].csp : null);
-  renderResults(ICS.MAP.slice(0, 20));
+  renderResults(ICS.MAP.slice(0, 20), ICS.MAP.length);
 })();

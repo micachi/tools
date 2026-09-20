@@ -38,15 +38,17 @@ const W3D = (() => {
     return (PS_DRIVE[root] || "HKLM:") + rest;
   }
 
+  /* 検出ルールの種類。カスタムスクリプトは本ツールが生成する成果物そのものなので
+     「項目なしのルール」としては持たせない（空チェックで誤検出するため）。 */
   const RULE_TYPES = EN
-    ? { msi: "MSI", file: "File / Folder", registry: "Registry", script: "Custom script" }
-    : { msi: "MSI", file: "ファイル / フォルダ", registry: "レジストリ", script: "カスタムスクリプト" };
+    ? { msi: "MSI", file: "File / Folder", registry: "Registry" }
+    : { msi: "MSI", file: "ファイル / フォルダ", registry: "レジストリ" };
 
   /* ---- 個別検証 ---- */
   function validateRule(r) {
     const errs = [];
     const at = EN ? `Rule (${r.type})` : `ルール（${RULE_TYPES[r.type] || r.type}）`;
-    if (!["msi", "file", "registry", "script"].includes(r.type)) { errs.push(`${at}: 不明な型`); return errs; }
+    if (!["msi", "file", "registry"].includes(r.type)) { errs.push(`${at}: 不明な型`); return errs; }
 
     if (r.type === "msi") {
       if (!r.productCode || !GUID_RE.test(r.productCode.trim())) {
@@ -76,7 +78,7 @@ const W3D = (() => {
         errs.push(`${at}: ルートキーが不正です（HKEY_LOCAL_MACHINE または HKLM などで開始してください）`);
       }
       if (!/\\/.test(k.replace(/^[^\\]+\\/, ""))) {
-        errs.push(`${at}: ルート配下のサブキーパスを指定してください（例: HKLM\Software\Vendor\App）`);
+        errs.push(`${at}: ルート配下のサブキーパスを指定してください（例: HKLM\\Software\\Vendor\\App）`);
       }
     }
     return errs;
