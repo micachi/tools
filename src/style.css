@@ -176,11 +176,21 @@ th{color:var(--mut);font-weight:600;font-size:.83rem}
 .fjoin-space{flex:0 0 74px}
 .fent{flex:0 0 110px}
 .fprop{flex:1 1 230px;min-width:180px}
-.fop{flex:0 0 130px}
+.fop{flex:0 0 auto;min-width:128px}
 .fval{flex:1 1 200px;min-width:150px}
 .frow .mono,.fprop .mono{font-size:.78rem;color:var(--mut)}
+/* 列挙値の候補チップ（値を知らなくても選べる） */
+.fchips{display:flex;flex-wrap:wrap;gap:5px;margin:-2px 0 10px;padding-left:2px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;
+  border:1px solid var(--line);background:#131923;color:var(--mut);font-size:.78rem;line-height:1.35;
+  cursor:pointer;transition:.12s;font-family:inherit}
+.chip:hover{border-color:#3a4a63;color:var(--fg);background:#1a2230}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#08101e;font-weight:600}
+.chip .chipv{font-family:ui-monospace,"Consolas","Menlo",monospace;font-size:.72rem;opacity:.72}
+.chip.on .chipv{opacity:.85}
+.chip.nullable{border-style:dashed}
 .scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
-@media(max-width:700px){.fjoin,.fjoin-space{flex-basis:64px}.fent{flex-basis:92px}.fop{flex-basis:110px}}
+@media(max-width:700px){.fjoin,.fjoin-space{flex-basis:64px}.fent{flex-basis:92px}.fop{min-width:112px}}
 
 /* 展開ターゲットのセグメント切替（Edge / Chrome） */
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#0d1017}

@@ -740,6 +740,27 @@ console.log("\n=== 21. Intune 割り当てフィルター ルール生成 ===");
   ok(`全プリセット（${IFT.PRESETS.length} 個）が検証を通過`, badPreset.length === 0,
     badPreset.map((p) => p.name + ": " + IFT.validate(p.rules).join("|")).join(" / "));
 
+  /* --- 日本語表示名・列挙値ラベル（属性名をそのまま見せない） --- */
+  ok("プロパティに日本語名がある", IFT.propLabel("device", "manufacturer") === "メーカー",
+    IFT.propLabel("device", "manufacturer"));
+  ok("OS 系プロパティが日本語で区別できる",
+    IFT.propLabel("device", "operatingSystemVersion").includes("数値比較可") &&
+    IFT.propLabel("device", "osVersion").includes("文字列"),
+    IFT.propLabel("device", "operatingSystemVersion") + " / " + IFT.propLabel("device", "osVersion"));
+  ok("全プロパティに日本語名が定義済み",
+    Object.entries(IFT.DEVICE_PROPS).every(([k, d]) => !!d.ja),
+    Object.entries(IFT.DEVICE_PROPS).filter(([, d]) => !d.ja).map(([k]) => k).join(",") || "OK");
+  ok("全 enum プロパティに列挙値の日本語ラベル", IFT.enumPropsMissingJa().length === 0,
+    IFT.enumPropsMissingJa().join(" / ") || "OK");
+  ok("列挙値の日本語ラベル（所有権）", IFT.valueLabel("device", "deviceOwnership", "Corporate") === "法人所有");
+  ok("列挙値の日本語ラベル（Entra 参加）",
+    IFT.valueLabel("device", "deviceTrustType", "Azure AD Joined").includes("Entra Join"));
+  ok("列挙値の日本語ラベル（SKU）", IFT.valueLabel("device", "operatingSystemSKU", "Core") === "Home（個人版）");
+  ok("列挙値以外は値をそのまま返す", IFT.valueLabel("device", "manufacturer", "Dell") === "Dell");
+  ok("値未入力で undefined を出力しない",
+    IFT.build([{ entity: "device", prop: "deviceTrustType", op: "eq", values: [] }]) === "(device.deviceTrustType -eq)",
+    IFT.build([{ entity: "device", prop: "deviceTrustType", op: "eq", values: [] }]));
+
   /* --- ページ --- */
   for (const p of ["intune-filter/index.html", "en/intune-filter/index.html"]) {
     const h = fs.readFileSync(path.join(DIST, p), "utf8");
@@ -747,6 +768,8 @@ console.log("\n=== 21. Intune 割り当てフィルター ルール生成 ===");
       h.includes('id="out"') && h.includes('id="preset"') && h.includes('id="rows"'));
     ok(`${p}: 3072 文字の上限を明記`, h.includes("3,072") || h.includes("3072"));
     ok(`${p}: Null の制限を明記`, h.includes("$Null"));
+    ok(`${p}: 候補チップ（列挙値選択）UI 込み`, h.includes("fchips") && h.includes("chipv"));
+    ok(`${p}: 日本語名 / 公式名の表示名解決ロジック込み`, h.includes("propLabel") && h.includes("valueLabel"));
   }
 }
 
