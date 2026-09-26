@@ -6,7 +6,7 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { renderPage } from "./src/layout.mjs";
+import { renderPage, ADSENSE_CLIENT } from "./src/layout.mjs";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SRC = join(ROOT, "src");
@@ -125,6 +125,24 @@ function buildLocale(lang) {
 
 buildLocale("ja");
 buildLocale("en");
+
+// ── ads.txt（AdSense 認証ファイル）───────────────────────────
+// 広告を配信するドメイン（tools.wicachi.com）の直下に必須。
+// 無いと Google が「ads.txt が見つかりません」と判定し、エクスチェンジ側の需要が
+// 配信を止めるため収益が大きく落ちる。
+// 公開者 ID は layout.mjs の ADSENSE_CLIENT から導出し、二重管理を避ける。
+// ※ 置換時は Google の公式チェックサム (f08c47fec0942fa0) も一緒に確認すること。
+const ADSENSE_PUB = ADSENSE_CLIENT.replace(/^ca-/, "");
+writeFileSync(
+  join(OUT, "ads.txt"),
+  [
+    `# ads.txt — https://tools.wicachi.com/`,
+    `# Google AdSense（DIRECT / 公式チェックサム付き）`,
+    `google.com, ${ADSENSE_PUB}, DIRECT, f08c47fec0942fa0`,
+    "",
+  ].join("\n"),
+);
+made.push("ads.txt");
 
 // ── 旧 travel URL のリダイレクト（削除済み。検索エンジン・既存ブックマーク対策） ──
 const TRAVEL_OLD = ["", "bali/", "bangkok/", "honolulu/", "london/", "newyork/", "paris/", "rome/", "seoul/", "sydney/", "taipei/"];

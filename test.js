@@ -290,6 +290,17 @@ console.log("\n=== 10. AdSense 統合 ===");
   ok("全ページに「広告」明示（ポリシー対応）", labelOk === pages.length, `${labelOk}/${pages.length}`);
   ok("欠落なし", missing.length === 0, missing.join(", ") || "なし");
   ok("adsbygoogle push あり", fs.readFileSync(path.join(DIST, "index.html"), "utf8").includes("(adsbygoogle = window.adsbygoogle || []).push({});"));
+
+  // ads.txt — 広告配信ドメイン直下に必須（無いと「ads.txt が見つかりません」）
+  const adsTxtPath = path.join(DIST, "ads.txt");
+  ok("dist/ads.txt が存在", fs.existsSync(adsTxtPath));
+  if (fs.existsSync(adsTxtPath)) {
+    const t = fs.readFileSync(adsTxtPath, "utf8");
+    const line = "google.com, " + CLIENT.replace(/^ca-/, "") + ", DIRECT, f08c47fec0942fa0";
+    ok("ads.txt に AdSense DIRECT 行が正しい形式で存在", t.split(/\r?\n/).some((l) => l.trim() === line), line);
+    ok("ads.txt の公開者 ID がページ側の client と一致", t.includes(CLIENT.replace(/^ca-/, "")) && !t.includes("ca-pub-"));
+    ok("ads.txt に不正な非コメント行なし", t.split(/\r?\n/).filter((l) => l.trim() && !l.trim().startsWith("#")).every((l) => /^[a-z0-9.-]+,\s*pub-\d+,\s*(DIRECT|RESELLER|PUBLISHERUNKNOWN)\s*(,\s*[0-9a-f]{16}\s*)?$/i.test(l.trim())));
+  }
 }
 
 console.log("\n=== 11. pwgen のコピーは「生成処理」に限定されているか ===");
