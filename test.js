@@ -1103,5 +1103,47 @@ console.log("\n=== 25. メニュー構成（カテゴリ再構成） ===");
     SLUGS.filter((s) => !menu.includes(`href="./${s}/"`)).join(",") || "13/13");
 }
 
+console.log("\n=== 26. 広告の制御ポリシー（自動広告の禁止・1ページ1枠） ===");
+{
+  // 自動広告のトリガーになるマーカーは一律禁止（コード側の回帰ガード）
+  const AUTO_MARKERS = [
+    "enable_page_level_ads",
+    "data-ad-layout-key",
+    "data-adbreak",
+    "google_ad_layout",
+    "data-ad-layout",
+    "data-ad-companion",
+  ];
+  const hits = [];
+  let oneUnit = 0, inWrap = 0, noBtnAdj = 0;
+  const slotValues = new Set(), clientValues = new Set();
+
+  for (const p of pages) {
+    const h = fs.readFileSync(path.join(DIST, p), "utf8");
+    for (const m of AUTO_MARKERS) if (h.includes(m)) hits.push(`${p}: ${m}`);
+
+    const units = (h.match(/ins class="adsbygoogle"/g) || []).length;
+    if (units === 1) oneUnit++;
+
+    // 広告ユニットは「広告」ラベル付きの管理容器 .adwrap の中に限る
+    const wrap = h.match(/<div class="adwrap">[\s\S]*?<\/div>/);
+    if (wrap && wrap[0].includes('ins class="adsbygoogle"') && wrap[0].includes('class="adlabel"')) inWrap++;
+
+    // 操作ボタンの直後に広告を置かない（誤クリック誘発回避）
+    if (!/<\/button>\s*<div class="adwrap"/.test(h) && !/<\/button>\s*<ins class="adsbygoogle"/.test(h)) noBtnAdj++;
+
+    (h.match(/data-ad-slot="([0-9]+)"/g) || []).forEach((s) => slotValues.add(s));
+    (h.match(/data-ad-client="([^"]+)"/g) || []).forEach((s) => clientValues.add(s));
+  }
+
+  ok("自動広告マーカーが一切ない（28ページ）", hits.length === 0, hits.slice(0, 4).join(" / ") || "0件");
+  ok("1ページにつき広告ユニットちょうど 1 個", oneUnit === pages.length, `${oneUnit}/${pages.length}`);
+  ok("広告ユニットは .adwrap（「広告」ラベル付き容器）内のみ", inWrap === pages.length, `${inWrap}/${pages.length}`);
+  ok("ボタンの直後に広告を置いていない", noBtnAdj === pages.length, `${noBtnAdj}/${pages.length}`);
+  ok("スロットは単一値に統一", slotValues.size === 1, [...slotValues].join(","));
+  ok("client は単一値に統一", clientValues.size === 1, [...clientValues].join(","));
+  ok("広告枠は横幅を抑制（max-width:680px）", fs.readFileSync(path.join(DIST, "index.html"), "utf8").includes("max-width:680px"));
+}
+
 console.log(`\n---- ${pass} passed, ${fail} failed ----\n`);
 process.exit(fail ? 1 : 0);

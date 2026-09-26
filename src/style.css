@@ -155,7 +155,14 @@ button.primary:hover{background:#6cabff}
 .switch{display:flex;align-items:center;gap:8px;font-size:.92rem;cursor:pointer}
 
 /* AdSense（広告）— 「広告」明示は Google ポリシー上の必須 */
-.adwrap{margin:22px 0;padding:14px;background:#11151d;border:1px solid var(--line);border-radius:12px;min-height:90px}
+/* 広告コンテナ（.adwrap）
+   自動広告にレイアウトを支配させないための自前枠。うちが出している 1 枠だけを
+   固定幅に閉じ込め、異サイズクリエイティブでの崩れ・レイアウトシフトを抑える。
+   ※ Google が配信した広告を CSS で隠すのはポリシー違反になり得るため行わない。
+     自動広告自体は AdSense 管理画面（自動広告 OFF / 除外エリア・除外ページ）で止める。 */
+.adwrap{margin:26px auto;padding:14px;background:#11151d;border:1px solid var(--line);
+  border-radius:12px;max-width:680px;overflow:hidden;min-height:90px;contain:layout paint}
+.adwrap ins.adsbygoogle{display:block;margin:0 auto;max-width:100%}
 .adlabel{margin:0 0 8px;font-size:.68rem;color:#6b7482;letter-spacing:.12em;text-transform:uppercase}
 
 /* 表（color / intunestart / edge-favorites で使用） */
